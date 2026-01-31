@@ -72,53 +72,102 @@ func runReport(input, format, output string) error {
 func generateHTML(report *types.Report) (string, error) {
 	tmpl := `
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Docker Doctor Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2, h3 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .issue { margin-bottom: 20px; border-left: 5px solid #ff6b6b; padding-left: 10px; }
+        .stable { color: green; }
+        .severity-high { color: red; }
+        .severity-medium { color: orange; }
+        .severity-low { color: yellow; }
+    </style>
 </head>
 <body>
     <h1>Docker Doctor Report</h1>
-    <p>Timestamp: {{.Timestamp}}</p>
-    <h2>Host Info</h2>
-    <p>OS: {{.Host.OS}}</p>
-    <p>Arch: {{.Host.Arch}}</p>
+    <p><strong>Timestamp:</strong> {{.Timestamp.Format "2006-01-02 15:04:05"}}</p>
+
+    <h2>Host Information</h2>
+    <p><strong>Operating System:</strong> {{.Host.OS}}</p>
+    <p><strong>Architecture:</strong> {{.Host.Arch}}</p>
+
     <h3>Disk Usage</h3>
-    <ul>
-    {{range $path, $disk := .Host.DiskUsage}}
-        <li>{{$path}}: {{printf "%.2f" $disk.UsedPercent}}% used ({{$disk.Used}}/{{$disk.Total}} bytes)</li>
-    {{end}}
-    </ul>
-    <h2>Docker Info</h2>
-    <p>Version: {{.Docker.Version}}</p>
+    <table>
+        <tr>
+            <th>Path</th>
+            <th>Used (%)</th>
+            <th>Used (Bytes)</th>
+            <th>Total (Bytes)</th>
+        </tr>
+        {{range $path, $disk := .Host.DiskUsage}}
+        <tr>
+            <td>{{$path}}</td>
+            <td>{{printf "%.2f" $disk.UsedPercent}}</td>
+            <td>{{$disk.Used}}</td>
+            <td>{{$disk.Total}}</td>
+        </tr>
+        {{end}}
+    </table>
+
+    <h2>Docker Information</h2>
+    <p><strong>Version:</strong> {{.Docker.Version}}</p>
+
     <h2>Containers</h2>
-    <p>Count: {{.Containers.Count}}</p>
+    <p><strong>Total Count:</strong> {{.Containers.Count}}</p>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>OOM Killed</th>
+            <th>Health Status</th>
+        </tr>
+        {{range .Containers.List}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{.Status}}</td>
+            <td>{{if .OOMKilled}}Yes{{else}}No{{end}}</td>
+            <td>{{.HealthStatus}}</td>
+        </tr>
+        {{end}}
+    </table>
+
     <h2>Images</h2>
-    <p>Count: {{.Images.Count}}</p>
+    <p><strong>Count:</strong> {{.Images.Count}}</p>
+    <p><strong>Total Size:</strong> {{.Images.TotalSize}} bytes</p>
+
     <h2>Volumes</h2>
-    <p>Count: {{.Volumes.Count}}</p>
-    <h2>Issues</h2>
+    <p><strong>Count:</strong> {{.Volumes.Count}}</p>
+
+    <h2>Diagnostic Issues</h2>
     {{if .Issues}}
-    <ul>
-    {{range .Issues}}
-        <li>
-            <strong>{{.Category}} ({{.Severity}}):</strong> {{.Description}}
-            <br><strong>Facts:</strong>
+        {{range .Issues}}
+        <div class="issue severity-{{.Severity}}">
+            <h3>{{.Category}} Issue ({{.Severity}} Severity)</h3>
+            <p><strong>Description:</strong> {{.Description}}</p>
+            <h4>Facts</h4>
             <ul>
             {{range $key, $value := .Facts}}
-                <li>{{$key}}: {{$value}}</li>
+                <li><strong>{{$key}}:</strong> {{$value}}</li>
             {{end}}
             </ul>
-            <strong>Solutions:</strong>
-            <ul>
+            <h4>Recommended Solutions</h4>
+            <ol>
             {{range .Solutions}}
                 <li>{{.}}</li>
             {{end}}
-            </ul>
-        </li>
-    {{end}}
-    </ul>
+            </ol>
+        </div>
+        {{end}}
     {{else}}
-    <p>No issues found.</p>
+        <p class="stable"><strong>All systems stable - No issues detected!</strong></p>
     {{end}}
 </body>
 </html>
@@ -137,46 +186,62 @@ func generateHTML(report *types.Report) (string, error) {
 func generateMarkdown(report *types.Report) (string, error) {
 	md := fmt.Sprintf(`# Docker Doctor Report
 
-Timestamp: %s
+**Timestamp:** %s
 
-## Host Info
-- OS: %s
-- Arch: %s
+## Host Information
+- **Operating System:** %s
+- **Architecture:** %s
 
 ### Disk Usage
-`, report.Timestamp, report.Host.OS, report.Host.Arch)
+| Path | Used (%%) | Used (Bytes) | Total (Bytes) |
+|------|-----------|--------------|---------------|
+`, report.Timestamp.Format("2006-01-02 15:04:05"), report.Host.OS, report.Host.Arch)
 	for path, disk := range report.Host.DiskUsage {
-		md += fmt.Sprintf("- %s: %.2f%% used (%d/%d bytes)\n", path, disk.UsedPercent, disk.Used, disk.Total)
+		md += fmt.Sprintf("| %s | %.2f | %d | %d |\n", path, disk.UsedPercent, disk.Used, disk.Total)
 	}
 	md += fmt.Sprintf(`
-## Docker Info
-- Version: %s
+
+## Docker Information
+- **Version:** %s
 
 ## Containers
-- Count: %d
+- **Total Count:** %d
+
+| ID | Name | Status | OOM Killed | Health Status |
+|----|------|--------|------------|---------------|
+`, report.Docker.Version, report.Containers.Count)
+	for _, container := range report.Containers.List {
+		oom := "No"
+		if container.OOMKilled {
+			oom = "Yes"
+		}
+		md += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", container.ID, container.Name, container.Status, oom, container.HealthStatus)
+	}
+	md += fmt.Sprintf(`
 
 ## Images
-- Count: %d
+- **Count:** %d
+- **Total Size:** %d bytes
 
 ## Volumes
-- Count: %d
+- **Count:** %d
 
-## Issues
-`, report.Docker.Version, report.Containers.Count, report.Images.Count, report.Volumes.Count)
+## Diagnostic Issues
+`, report.Images.Count, report.Images.TotalSize, report.Volumes.Count)
 	if len(report.Issues) > 0 {
 		for _, issue := range report.Issues {
-			md += fmt.Sprintf("### %s (%s)\n%s\n\n**Facts:**\n", issue.Category, issue.Severity, issue.Description)
+			md += fmt.Sprintf("### %s Issue (%s Severity)\n%s\n\n**Facts:**\n", strings.Title(issue.Category), strings.Title(issue.Severity), issue.Description)
 			for key, value := range issue.Facts {
-				md += fmt.Sprintf("- %s: %v\n", key, value)
+				md += fmt.Sprintf("- **%s:** %v\n", strings.Title(strings.ReplaceAll(key, "_", " ")), value)
 			}
-			md += "\n**Solutions:**\n"
-			for _, sol := range issue.Solutions {
-				md += fmt.Sprintf("- %s\n", sol)
+			md += "\n**Recommended Solutions:**\n"
+			for i, sol := range issue.Solutions {
+				md += fmt.Sprintf("%d. %s\n", i+1, sol)
 			}
 			md += "\n"
 		}
 	} else {
-		md += "No issues found.\n"
+		md += "**All systems stable - No issues detected!**\n"
 	}
 	return md, nil
 }

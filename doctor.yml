@@ -4,9 +4,16 @@ scan:
   dockerHost: unix:///Users/nowshadurrahaman/.rd/docker.sock
   version: "1.41"
 
+
 rules:
   disk_usage:
     threshold: 80
   storage_bloat:
     image_size_threshold: 10737418240  # 10GB
     volume_size_threshold: 5368709120  # 5GB
+  restarts:
+    threshold: 3
+  oom:
+    enabled: true
+  healthcheck:
+    enabled: true
