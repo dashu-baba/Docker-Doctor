@@ -16,7 +16,7 @@ import (
 )
 
 // Collect gathers all the required data for the report.
-func Collect(ctx context.Context) (*types.Report, error) {
+func Collect(ctx context.Context, apiVersion string) (*types.Report, error) {
 	report := &types.Report{
 		Timestamp: time.Now(),
 	}
@@ -29,28 +29,28 @@ func Collect(ctx context.Context) (*types.Report, error) {
 	report.Host = *hostInfo
 
 	// Collect Docker info
-	dockerInfo, err := collectDockerInfo(ctx)
+	dockerInfo, err := collectDockerInfo(ctx, apiVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect Docker info: %w", err)
 	}
 	report.Docker = *dockerInfo
 
 	// Collect containers
-	containers, err := collectContainers(ctx)
+	containers, err := collectContainers(ctx, apiVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect containers: %w", err)
 	}
 	report.Containers = *containers
 
 	// Collect images
-	images, err := collectImages(ctx)
+	images, err := collectImages(ctx, apiVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect images: %w", err)
 	}
 	report.Images = *images
 
 	// Collect volumes
-	volumes, err := collectVolumes(ctx)
+	volumes, err := collectVolumes(ctx, apiVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect volumes: %w", err)
 	}
@@ -93,17 +93,16 @@ func getDiskUsage(path string) (uint64, error) {
 	return total - available, nil
 }
 
-func newClient() (*client.Client, error) {
+func newClient(apiVersion string) (*client.Client, error) {
 	host := os.Getenv("DOCKER_HOST")
 	if host == "" {
 		host = "unix:///var/run/docker.sock"
 	}
-	version := "1.40"
-	return client.NewClient(host, version, nil, nil)
+	return client.NewClient(host, apiVersion, nil, nil)
 }
 
-func collectDockerInfo(ctx context.Context) (*types.DockerInfo, error) {
-	cli, err := newClient()
+func collectDockerInfo(ctx context.Context, apiVersion string) (*types.DockerInfo, error) {
+	cli, err := newClient(apiVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +129,8 @@ func collectDockerInfo(ctx context.Context) (*types.DockerInfo, error) {
 	return dockerInfo, nil
 }
 
-func collectContainers(ctx context.Context) (*types.Containers, error) {
-	cli, err := newClient()
+func collectContainers(ctx context.Context, apiVersion string) (*types.Containers, error) {
+	cli, err := newClient(apiVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -152,8 +151,8 @@ func collectContainers(ctx context.Context) (*types.Containers, error) {
 	return cont, nil
 }
 
-func collectImages(ctx context.Context) (*types.Images, error) {
-	cli, err := newClient()
+func collectImages(ctx context.Context, apiVersion string) (*types.Images, error) {
+	cli, err := newClient(apiVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -174,8 +173,8 @@ func collectImages(ctx context.Context) (*types.Images, error) {
 	return img, nil
 }
 
-func collectVolumes(ctx context.Context) (*types.Volumes, error) {
-	cli, err := newClient()
+func collectVolumes(ctx context.Context, apiVersion string) (*types.Volumes, error) {
+	cli, err := newClient(apiVersion)
 	if err != nil {
 		return nil, err
 	}

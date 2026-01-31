@@ -13,7 +13,8 @@ func TestCollect(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	report, err := Collect(ctx)
+	apiVersion := "1.40"
+	report, err := Collect(ctx, apiVersion)
 	if err != nil {
 		t.Fatalf("Collect failed: %v", err)
 	}
