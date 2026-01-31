@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types.Report, error) {
 	report := &types.Report{
 		Timestamp: time.Now(),
-		Issues:    []string{},
+		Issues:    []types.Issue{},
 	}
 
 	// Collect host info
@@ -173,11 +174,13 @@ func collectImages(ctx context.Context, apiVersion string) (*types.Images, error
 	}
 
 	img := &types.Images{
-		Count: len(images),
-		List:  make([]string, 0, len(images)),
+		Count:     len(images),
+		List:      make([]string, 0, len(images)),
+		TotalSize: 0,
 	}
 	for _, i := range images {
 		img.List = append(img.List, i.ID)
+		img.TotalSize += uint64(i.Size)
 	}
 
 	return img, nil
@@ -209,7 +212,75 @@ func diagnose(report *types.Report, cfg *config.Config) {
 	// Check disk usage
 	for path, disk := range report.Host.DiskUsage {
 		if disk.UsedPercent > float64(cfg.Rules.DiskUsage.Threshold) {
-			report.Issues = append(report.Issues, fmt.Sprintf("Disk usage for %s is %.2f%%, exceeds threshold %d%%", path, disk.UsedPercent, cfg.Rules.DiskUsage.Threshold))
+			severity := "medium"
+			if disk.UsedPercent > 90 {
+				severity = "high"
+			} else if disk.UsedPercent < 85 {
+				severity = "low"
+			}
+
+			facts := map[string]interface{}{
+				"path":         path,
+				"used_bytes":   disk.Used,
+				"total_bytes":  disk.Total,
+				"used_percent": disk.UsedPercent,
+				"threshold":    cfg.Rules.DiskUsage.Threshold,
+			}
+
+			solutions := []string{
+				"Identify and remove unused files or directories.",
+				"Consider increasing disk space if possible.",
+			}
+
+			if path == "/var/lib/docker" || strings.Contains(path, "docker") {
+				solutions = append(solutions,
+					"Run 'docker system prune' to remove unused containers, images, and networks.",
+					"Run 'docker volume prune' to remove unused volumes.",
+					"Inspect and clean up large Docker images or logs.",
+				)
+			} else if path == "/" {
+				solutions = append(solutions,
+					"Check for large log files in /var/log and rotate them.",
+					"Remove old kernel packages: 'apt autoremove' (on Ubuntu/Debian).",
+				)
+			}
+
+			issue := types.Issue{
+				Severity:    severity,
+				Category:    "disk_usage",
+				Description: fmt.Sprintf("Disk usage for %s is %.2f%%, exceeding threshold of %d%%", path, disk.UsedPercent, cfg.Rules.DiskUsage.Threshold),
+				Facts:       facts,
+				Solutions:   solutions,
+			}
+			report.Issues = append(report.Issues, issue)
 		}
+	}
+
+	// Check storage bloat
+	if report.Images.TotalSize > cfg.Rules.StorageBloat.ImageSizeThreshold {
+		severity := "medium"
+		if report.Images.TotalSize > cfg.Rules.StorageBloat.ImageSizeThreshold*2 {
+			severity = "high"
+		}
+
+		facts := map[string]interface{}{
+			"total_images":     report.Images.Count,
+			"total_image_size": report.Images.TotalSize,
+			"size_threshold":   cfg.Rules.StorageBloat.ImageSizeThreshold,
+		}
+
+		issue := types.Issue{
+			Severity:    severity,
+			Category:    "storage_bloat",
+			Description: fmt.Sprintf("Total Docker image size is %d bytes, exceeding threshold of %d bytes", report.Images.TotalSize, cfg.Rules.StorageBloat.ImageSizeThreshold),
+			Facts:       facts,
+			Solutions: []string{
+				"Run 'docker images' to list images and their sizes.",
+				"Remove unused images: 'docker image prune -a'",
+				"Use multi-stage builds to reduce image sizes.",
+				"Consider using smaller base images.",
+			},
+		}
+		report.Issues = append(report.Issues, issue)
 	}
 }

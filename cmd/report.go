@@ -84,8 +84,8 @@ func generateHTML(report *types.Report) (string, error) {
     <p>Arch: {{.Host.Arch}}</p>
     <h3>Disk Usage</h3>
     <ul>
-    {{range $path, $usage := .Host.DiskUsage}}
-        <li>{{$path}}: {{$usage}} bytes</li>
+    {{range $path, $disk := .Host.DiskUsage}}
+        <li>{{$path}}: {{printf "%.2f" $disk.UsedPercent}}% used ({{$disk.Used}}/{{$disk.Total}} bytes)</li>
     {{end}}
     </ul>
     <h2>Docker Info</h2>
@@ -96,6 +96,30 @@ func generateHTML(report *types.Report) (string, error) {
     <p>Count: {{.Images.Count}}</p>
     <h2>Volumes</h2>
     <p>Count: {{.Volumes.Count}}</p>
+    <h2>Issues</h2>
+    {{if .Issues}}
+    <ul>
+    {{range .Issues}}
+        <li>
+            <strong>{{.Category}} ({{.Severity}}):</strong> {{.Description}}
+            <br><strong>Facts:</strong>
+            <ul>
+            {{range $key, $value := .Facts}}
+                <li>{{$key}}: {{$value}}</li>
+            {{end}}
+            </ul>
+            <strong>Solutions:</strong>
+            <ul>
+            {{range .Solutions}}
+                <li>{{.}}</li>
+            {{end}}
+            </ul>
+        </li>
+    {{end}}
+    </ul>
+    {{else}}
+    <p>No issues found.</p>
+    {{end}}
 </body>
 </html>
 `
@@ -121,8 +145,8 @@ Timestamp: %s
 
 ### Disk Usage
 `, report.Timestamp, report.Host.OS, report.Host.Arch)
-	for path, usage := range report.Host.DiskUsage {
-		md += fmt.Sprintf("- %s: %d bytes\n", path, usage)
+	for path, disk := range report.Host.DiskUsage {
+		md += fmt.Sprintf("- %s: %.2f%% used (%d/%d bytes)\n", path, disk.UsedPercent, disk.Used, disk.Total)
 	}
 	md += fmt.Sprintf(`
 ## Docker Info
@@ -136,6 +160,23 @@ Timestamp: %s
 
 ## Volumes
 - Count: %d
+
+## Issues
 `, report.Docker.Version, report.Containers.Count, report.Images.Count, report.Volumes.Count)
+	if len(report.Issues) > 0 {
+		for _, issue := range report.Issues {
+			md += fmt.Sprintf("### %s (%s)\n%s\n\n**Facts:**\n", issue.Category, issue.Severity, issue.Description)
+			for key, value := range issue.Facts {
+				md += fmt.Sprintf("- %s: %v\n", key, value)
+			}
+			md += "\n**Solutions:**\n"
+			for _, sol := range issue.Solutions {
+				md += fmt.Sprintf("- %s\n", sol)
+			}
+			md += "\n"
+		}
+	} else {
+		md += "No issues found.\n"
+	}
 	return md, nil
 }

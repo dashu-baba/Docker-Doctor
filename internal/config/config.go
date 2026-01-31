@@ -24,12 +24,19 @@ type ScanConfig struct {
 
 // Rules holds the diagnostic rules.
 type Rules struct {
-	DiskUsage DiskUsageRule `yaml:"disk_usage"`
+	DiskUsage    DiskUsageRule    `yaml:"disk_usage"`
+	StorageBloat StorageBloatRule `yaml:"storage_bloat"`
 }
 
 // DiskUsageRule defines rules for disk usage checks.
 type DiskUsageRule struct {
 	Threshold int `yaml:"threshold"` // percentage (0-100)
+}
+
+// StorageBloatRule defines rules for storage bloat checks.
+type StorageBloatRule struct {
+	ImageSizeThreshold  uint64 `yaml:"image_size_threshold"`  // in bytes
+	VolumeSizeThreshold uint64 `yaml:"volume_size_threshold"` // in bytes
 }
 
 // Load reads and parses the config file.
@@ -87,13 +94,27 @@ func (s *ScanConfig) Validate() error {
 
 // Validate checks the Rules for correctness.
 func (r *Rules) Validate() error {
-	return r.DiskUsage.Validate()
+	if err := r.DiskUsage.Validate(); err != nil {
+		return err
+	}
+	return r.StorageBloat.Validate()
 }
 
 // Validate checks the DiskUsageRule for correctness.
 func (d *DiskUsageRule) Validate() error {
 	if d.Threshold < 0 || d.Threshold > 100 {
 		return fmt.Errorf("disk_usage threshold must be between 0 and 100, got %d", d.Threshold)
+	}
+	return nil
+}
+
+// Validate checks the StorageBloatRule for correctness.
+func (s *StorageBloatRule) Validate() error {
+	if s.ImageSizeThreshold < 0 {
+		return fmt.Errorf("image_size_threshold must be non-negative, got %d", s.ImageSizeThreshold)
+	}
+	if s.VolumeSizeThreshold < 0 {
+		return fmt.Errorf("volume_size_threshold must be non-negative, got %d", s.VolumeSizeThreshold)
 	}
 	return nil
 }

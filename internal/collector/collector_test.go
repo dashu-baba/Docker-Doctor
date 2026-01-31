@@ -21,6 +21,10 @@ func TestCollect(t *testing.T) {
 			DiskUsage: config.DiskUsageRule{
 				Threshold: 80,
 			},
+			StorageBloat: config.StorageBloatRule{
+				ImageSizeThreshold:  10737418240,
+				VolumeSizeThreshold: 5368709120,
+			},
 		},
 	}
 	report, err := Collect(ctx, apiVersion, cfg)

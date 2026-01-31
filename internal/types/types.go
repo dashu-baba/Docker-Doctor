@@ -11,15 +11,15 @@ type DiskInfo struct {
 
 // HostInfo holds basic host system information and disk usage.
 type HostInfo struct {
-	OS        string                `json:"os"`
-	Arch      string                `json:"arch"`
+	OS        string               `json:"os"`
+	Arch      string               `json:"arch"`
 	DiskUsage map[string]*DiskInfo `json:"disk_usage"` // path to disk info
 }
 
 // DockerInfo holds Docker daemon and version information.
 type DockerInfo struct {
-	Version     string                 `json:"version"`
-	DaemonInfo  map[string]interface{} `json:"daemon_info"`
+	Version    string                 `json:"version"`
+	DaemonInfo map[string]interface{} `json:"daemon_info"`
 }
 
 // Containers holds container count and basic list.
@@ -30,8 +30,9 @@ type Containers struct {
 
 // Images holds image count and basic list.
 type Images struct {
-	Count int      `json:"count"`
-	List  []string `json:"list"` // image IDs
+	Count     int      `json:"count"`
+	List      []string `json:"list"`       // image IDs
+	TotalSize uint64   `json:"total_size"` // total size in bytes
 }
 
 // Volumes holds volume count and basic list.
@@ -40,13 +41,22 @@ type Volumes struct {
 	List  []string `json:"list"` // volume names
 }
 
+// Issue represents a diagnostic finding.
+type Issue struct {
+	Severity    string                 `json:"severity"` // low, medium, high
+	Category    string                 `json:"category"` // e.g., disk_usage, storage_bloat
+	Description string                 `json:"description"`
+	Facts       map[string]interface{} `json:"facts"`
+	Solutions   []string               `json:"solutions"`
+}
+
 // Report is the top-level structure for the scan report.
 type Report struct {
-	Host       HostInfo    `json:"host"`
-	Docker     DockerInfo  `json:"docker"`
-	Containers Containers  `json:"containers"`
-	Images     Images      `json:"images"`
-	Volumes    Volumes     `json:"volumes"`
-	Issues     []string    `json:"issues"`
-	Timestamp  time.Time   `json:"timestamp"`
+	Host       HostInfo   `json:"host"`
+	Docker     DockerInfo `json:"docker"`
+	Containers Containers `json:"containers"`
+	Images     Images     `json:"images"`
+	Volumes    Volumes    `json:"volumes"`
+	Issues     []Issue    `json:"issues"`
+	Timestamp  time.Time  `json:"timestamp"`
 }

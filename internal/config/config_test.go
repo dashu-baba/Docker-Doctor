@@ -24,6 +24,10 @@ func TestConfigValidate(t *testing.T) {
 					DiskUsage: DiskUsageRule{
 						Threshold: 80,
 					},
+					StorageBloat: StorageBloatRule{
+						ImageSizeThreshold:  10737418240,
+						VolumeSizeThreshold: 5368709120,
+					},
 				},
 			},
 			wantErr: false,
@@ -77,6 +81,10 @@ func TestConfigValidate(t *testing.T) {
 					DiskUsage: DiskUsageRule{
 						Threshold: 80,
 					},
+					StorageBloat: StorageBloatRule{
+						ImageSizeThreshold:  10737418240,
+						VolumeSizeThreshold: 5368709120,
+					},
 				},
 			},
 			wantErr: true,
@@ -120,6 +128,9 @@ func TestLoad(t *testing.T) {
 rules:
   disk_usage:
     threshold: 80
+  storage_bloat:
+    image_size_threshold: 10737418240
+    volume_size_threshold: 5368709120
 `
 	tmpFile, err := os.CreateTemp("", "config.yml")
 	if err != nil {
