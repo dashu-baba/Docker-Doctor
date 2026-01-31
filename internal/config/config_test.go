@@ -28,6 +28,15 @@ func TestConfigValidate(t *testing.T) {
 						ImageSizeThreshold:  10737418240,
 						VolumeSizeThreshold: 5368709120,
 					},
+					Restarts: RestartsRule{
+						Threshold: 3,
+					},
+					OOM: OOMRule{
+						Enabled: true,
+					},
+					Healthcheck: HealthcheckRule{
+						Enabled: true,
+					},
 				},
 			},
 			wantErr: false,
@@ -85,6 +94,15 @@ func TestConfigValidate(t *testing.T) {
 						ImageSizeThreshold:  10737418240,
 						VolumeSizeThreshold: 5368709120,
 					},
+					Restarts: RestartsRule{
+						Threshold: 3,
+					},
+					OOM: OOMRule{
+						Enabled: true,
+					},
+					Healthcheck: HealthcheckRule{
+						Enabled: true,
+					},
 				},
 			},
 			wantErr: true,
@@ -131,6 +149,12 @@ rules:
   storage_bloat:
     image_size_threshold: 10737418240
     volume_size_threshold: 5368709120
+  restarts:
+    threshold: 3
+  oom:
+    enabled: true
+  healthcheck:
+    enabled: true
 `
 	tmpFile, err := os.CreateTemp("", "config.yml")
 	if err != nil {

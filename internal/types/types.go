@@ -22,10 +22,21 @@ type DockerInfo struct {
 	DaemonInfo map[string]interface{} `json:"daemon_info"`
 }
 
-// Containers holds container count and basic list.
+// ContainerInfo holds information about a container.
+type ContainerInfo struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	RestartCount   int       `json:"restart_count"`
+	Status         string    `json:"status"`
+	OOMKilled      bool      `json:"oom_killed"`
+	HealthStatus   string    `json:"health_status"`
+	UnhealthySince time.Time `json:"unhealthy_since"`
+}
+
+// Containers holds container count and detailed list.
 type Containers struct {
-	Count int      `json:"count"`
-	List  []string `json:"list"` // container IDs or names
+	Count int             `json:"count"`
+	List  []ContainerInfo `json:"list"`
 }
 
 // Images holds image count and basic list.

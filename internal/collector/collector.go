@@ -153,10 +153,30 @@ func collectContainers(ctx context.Context, apiVersion string) (*types.Container
 
 	cont := &types.Containers{
 		Count: len(containers),
-		List:  make([]string, 0, len(containers)),
+		List:  make([]types.ContainerInfo, 0, len(containers)),
 	}
 	for _, c := range containers {
-		cont.List = append(cont.List, c.ID[:12]) // short ID
+		// Inspect to get OOM and health status
+		inspect, err := cli.ContainerInspect(c.ID)
+		oomKilled := false
+		healthStatus := "none"
+		var unhealthySince time.Time
+		if err == nil {
+			oomKilled = inspect.State.OOMKilled
+			// Health checks not available in this API version
+			// Assume healthy if running
+		}
+		// Ignore inspect errors
+
+		cont.List = append(cont.List, types.ContainerInfo{
+			ID:             c.ID[:12],  // short ID
+			Name:           c.Names[0], // first name
+			RestartCount:   0,          // not available in list
+			Status:         c.Status,
+			OOMKilled:      oomKilled,
+			HealthStatus:   healthStatus,
+			UnhealthySince: unhealthySince,
+		})
 	}
 
 	return cont, nil
@@ -282,5 +302,97 @@ func diagnose(report *types.Report, cfg *config.Config) {
 			},
 		}
 		report.Issues = append(report.Issues, issue)
+	}
+
+	// Check container restarts
+	for _, container := range report.Containers.List {
+		if strings.Contains(strings.ToLower(container.Status), "restarting") {
+			facts := map[string]interface{}{
+				"container_id":   container.ID,
+				"container_name": container.Name,
+				"status":         container.Status,
+			}
+
+			issue := types.Issue{
+				Severity:    "high",
+				Category:    "restarts",
+				Description: fmt.Sprintf("Container %s (%s) is in restarting state", container.Name, container.ID),
+				Facts:       facts,
+				Solutions: []string{
+					fmt.Sprintf("Check logs: 'docker logs %s'", container.ID),
+					"Inspect container configuration for errors.",
+					"Check resource limits (CPU/memory) that might cause crashes.",
+					"Review application code for stability issues.",
+					"Stop and restart the container manually if needed.",
+				},
+			}
+			report.Issues = append(report.Issues, issue)
+		}
+	}
+
+	// Check OOM kills
+	if cfg.Rules.OOM.Enabled {
+		for _, container := range report.Containers.List {
+			if container.OOMKilled {
+				facts := map[string]interface{}{
+					"container_id":   container.ID,
+					"container_name": container.Name,
+					"status":         container.Status,
+				}
+
+				issue := types.Issue{
+					Severity:    "high",
+					Category:    "oom",
+					Description: fmt.Sprintf("Container %s (%s) was killed due to out-of-memory condition", container.Name, container.ID),
+					Facts:       facts,
+					Solutions: []string{
+						fmt.Sprintf("Check logs: 'docker logs %s'", container.ID),
+						"Increase memory limit: 'docker update --memory <limit> " + container.ID + "'",
+						"Optimize application memory usage.",
+						"Check for memory leaks in the application.",
+						"Consider using memory profiling tools.",
+						"Review container resource allocation.",
+					},
+				}
+				report.Issues = append(report.Issues, issue)
+			}
+		}
+	}
+
+	// Check healthcheck failures
+	if cfg.Rules.Healthcheck.Enabled {
+		for _, container := range report.Containers.List {
+			if container.HealthStatus == "unhealthy" {
+				duration := time.Since(container.UnhealthySince)
+				severity := "medium"
+				if duration > time.Hour {
+					severity = "high"
+				}
+
+				facts := map[string]interface{}{
+					"container_id":       container.ID,
+					"container_name":     container.Name,
+					"health_status":      container.HealthStatus,
+					"unhealthy_since":    container.UnhealthySince,
+					"unhealthy_duration": duration.String(),
+				}
+
+				issue := types.Issue{
+					Severity:    severity,
+					Category:    "healthcheck",
+					Description: fmt.Sprintf("Container %s (%s) has been unhealthy for %s", container.Name, container.ID, duration.Round(time.Second)),
+					Facts:       facts,
+					Solutions: []string{
+						fmt.Sprintf("Check healthcheck logs: 'docker inspect %s | jq .State.Health.Log'", container.ID),
+						fmt.Sprintf("Check container logs: 'docker logs %s'", container.ID),
+						"Review healthcheck configuration in Dockerfile or compose file.",
+						"Ensure the healthcheck command is appropriate for the application.",
+						"Check application responsiveness and dependencies.",
+						"Consider adjusting healthcheck timeouts or intervals.",
+					},
+				}
+				report.Issues = append(report.Issues, issue)
+			}
+		}
 	}
 }

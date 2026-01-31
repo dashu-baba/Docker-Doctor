@@ -26,6 +26,9 @@ type ScanConfig struct {
 type Rules struct {
 	DiskUsage    DiskUsageRule    `yaml:"disk_usage"`
 	StorageBloat StorageBloatRule `yaml:"storage_bloat"`
+	Restarts     RestartsRule     `yaml:"restarts"`
+	OOM          OOMRule          `yaml:"oom"`
+	Healthcheck  HealthcheckRule  `yaml:"healthcheck"`
 }
 
 // DiskUsageRule defines rules for disk usage checks.
@@ -37,6 +40,21 @@ type DiskUsageRule struct {
 type StorageBloatRule struct {
 	ImageSizeThreshold  uint64 `yaml:"image_size_threshold"`  // in bytes
 	VolumeSizeThreshold uint64 `yaml:"volume_size_threshold"` // in bytes
+}
+
+// RestartsRule defines rules for container restart checks.
+type RestartsRule struct {
+	Threshold int `yaml:"threshold"` // max allowed restarts
+}
+
+// OOMRule defines rules for OOM kill checks.
+type OOMRule struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+// HealthcheckRule defines rules for container healthcheck checks.
+type HealthcheckRule struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 // Load reads and parses the config file.
@@ -97,7 +115,16 @@ func (r *Rules) Validate() error {
 	if err := r.DiskUsage.Validate(); err != nil {
 		return err
 	}
-	return r.StorageBloat.Validate()
+	if err := r.StorageBloat.Validate(); err != nil {
+		return err
+	}
+	if err := r.Restarts.Validate(); err != nil {
+		return err
+	}
+	if err := r.OOM.Validate(); err != nil {
+		return err
+	}
+	return r.Healthcheck.Validate()
 }
 
 // Validate checks the DiskUsageRule for correctness.
@@ -116,5 +143,25 @@ func (s *StorageBloatRule) Validate() error {
 	if s.VolumeSizeThreshold < 0 {
 		return fmt.Errorf("volume_size_threshold must be non-negative, got %d", s.VolumeSizeThreshold)
 	}
+	return nil
+}
+
+// Validate checks the RestartsRule for correctness.
+func (r *RestartsRule) Validate() error {
+	if r.Threshold < 0 {
+		return fmt.Errorf("restarts threshold must be non-negative, got %d", r.Threshold)
+	}
+	return nil
+}
+
+// Validate checks the OOMRule for correctness.
+func (o *OOMRule) Validate() error {
+	// No validation needed for boolean
+	return nil
+}
+
+// Validate checks the HealthcheckRule for correctness.
+func (h *HealthcheckRule) Validate() error {
+	// No validation needed for boolean
 	return nil
 }

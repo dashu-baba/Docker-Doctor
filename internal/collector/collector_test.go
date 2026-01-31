@@ -25,6 +25,15 @@ func TestCollect(t *testing.T) {
 				ImageSizeThreshold:  10737418240,
 				VolumeSizeThreshold: 5368709120,
 			},
+			Restarts: config.RestartsRule{
+				Threshold: 3,
+			},
+			OOM: config.OOMRule{
+				Enabled: true,
+			},
+			Healthcheck: config.HealthcheckRule{
+				Enabled: true,
+			},
 		},
 	}
 	report, err := Collect(ctx, apiVersion, cfg)
