@@ -1,0 +1,5 @@
+scan:
+  mode: basic
+  timeout: 30
+  dockerHost: unix:///var/run/docker.sock
+  version: "1.40"
