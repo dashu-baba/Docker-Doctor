@@ -57,7 +57,7 @@ func runScan(output string, apiVersion string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Scan.Timeout)*time.Second)
 	defer cancel()
 
-	report, err := collector.Collect(ctx, apiVersion)
+	report, err := collector.Collect(ctx, apiVersion, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}

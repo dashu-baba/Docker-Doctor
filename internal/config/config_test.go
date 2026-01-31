@@ -20,6 +20,11 @@ func TestConfigValidate(t *testing.T) {
 					DockerHost: "unix:///var/run/docker.sock",
 					Version:    "1.40",
 				},
+				Rules: Rules{
+					DiskUsage: DiskUsageRule{
+						Threshold: 80,
+					},
+				},
 			},
 			wantErr: false,
 		},
@@ -68,6 +73,28 @@ func TestConfigValidate(t *testing.T) {
 					DockerHost: "unix:///var/run/docker.sock",
 					Version:    "",
 				},
+				Rules: Rules{
+					DiskUsage: DiskUsageRule{
+						Threshold: 80,
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid disk threshold",
+			config: Config{
+				Scan: ScanConfig{
+					Mode:       "basic",
+					Timeout:    30,
+					DockerHost: "unix:///var/run/docker.sock",
+					Version:    "1.40",
+				},
+				Rules: Rules{
+					DiskUsage: DiskUsageRule{
+						Threshold: 150,
+					},
+				},
 			},
 			wantErr: true,
 		},
@@ -90,6 +117,9 @@ func TestLoad(t *testing.T) {
   timeout: 30
   dockerHost: unix:///var/run/docker.sock
   version: "1.40"
+rules:
+  disk_usage:
+    threshold: 80
 `
 	tmpFile, err := os.CreateTemp("", "config.yml")
 	if err != nil {
@@ -118,5 +148,8 @@ func TestLoad(t *testing.T) {
 	}
 	if cfg.Scan.Version != "1.40" {
 		t.Errorf("Expected version '1.40', got %s", cfg.Scan.Version)
+	}
+	if cfg.Rules.DiskUsage.Threshold != 80 {
+		t.Errorf("Expected disk_usage threshold 80, got %d", cfg.Rules.DiskUsage.Threshold)
 	}
 }

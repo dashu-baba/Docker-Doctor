@@ -3,3 +3,7 @@ scan:
   timeout: 30
   dockerHost: unix:///var/run/docker.sock
   version: "1.40"
+
+rules:
+  disk_usage:
+    threshold: 80

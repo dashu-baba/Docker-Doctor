@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/example/docker-doctor/internal/config"
 )
 
 func TestCollect(t *testing.T) {
@@ -14,7 +16,14 @@ func TestCollect(t *testing.T) {
 
 	ctx := context.Background()
 	apiVersion := "1.40"
-	report, err := Collect(ctx, apiVersion)
+	cfg := &config.Config{
+		Rules: config.Rules{
+			DiskUsage: config.DiskUsageRule{
+				Threshold: 80,
+			},
+		},
+	}
+	report, err := Collect(ctx, apiVersion, cfg)
 	if err != nil {
 		t.Fatalf("Collect failed: %v", err)
 	}
@@ -29,6 +38,10 @@ func TestCollect(t *testing.T) {
 	}
 	if report.Docker.Version == "" {
 		t.Error("Docker version not set")
+	}
+	// Issues should be initialized
+	if report.Issues == nil {
+		t.Error("Issues not initialized")
 	}
 	// Add more assertions as needed
 }

@@ -10,7 +10,8 @@ import (
 
 // Config represents the top-level configuration structure.
 type Config struct {
-	Scan ScanConfig `yaml:"scan"`
+	Scan  ScanConfig `yaml:"scan"`
+	Rules Rules      `yaml:"rules"`
 }
 
 // ScanConfig holds configuration for the scan operation.
@@ -19,6 +20,16 @@ type ScanConfig struct {
 	Timeout    int    `yaml:"timeout"`
 	DockerHost string `yaml:"dockerHost"`
 	Version    string `yaml:"version"`
+}
+
+// Rules holds the diagnostic rules.
+type Rules struct {
+	DiskUsage DiskUsageRule `yaml:"disk_usage"`
+}
+
+// DiskUsageRule defines rules for disk usage checks.
+type DiskUsageRule struct {
+	Threshold int `yaml:"threshold"` // percentage (0-100)
 }
 
 // Load reads and parses the config file.
@@ -42,7 +53,10 @@ func Load(filename string) (*Config, error) {
 
 // Validate checks the configuration for correctness.
 func (c *Config) Validate() error {
-	return c.Scan.Validate()
+	if err := c.Scan.Validate(); err != nil {
+		return err
+	}
+	return c.Rules.Validate()
 }
 
 // Validate checks the ScanConfig for correctness.
@@ -68,5 +82,18 @@ func (s *ScanConfig) Validate() error {
 		return fmt.Errorf("version cannot be empty")
 	}
 
+	return nil
+}
+
+// Validate checks the Rules for correctness.
+func (r *Rules) Validate() error {
+	return r.DiskUsage.Validate()
+}
+
+// Validate checks the DiskUsageRule for correctness.
+func (d *DiskUsageRule) Validate() error {
+	if d.Threshold < 0 || d.Threshold > 100 {
+		return fmt.Errorf("disk_usage threshold must be between 0 and 100, got %d", d.Threshold)
+	}
 	return nil
 }

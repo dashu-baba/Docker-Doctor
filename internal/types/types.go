@@ -2,11 +2,18 @@ package types
 
 import "time"
 
+// DiskInfo holds disk usage information.
+type DiskInfo struct {
+	Used        uint64  `json:"used"`
+	Total       uint64  `json:"total"`
+	UsedPercent float64 `json:"used_percent"`
+}
+
 // HostInfo holds basic host system information and disk usage.
 type HostInfo struct {
-	OS        string            `json:"os"`
-	Arch      string            `json:"arch"`
-	DiskUsage map[string]uint64 `json:"disk_usage"` // path to bytes used
+	OS        string                `json:"os"`
+	Arch      string                `json:"arch"`
+	DiskUsage map[string]*DiskInfo `json:"disk_usage"` // path to disk info
 }
 
 // DockerInfo holds Docker daemon and version information.
@@ -40,5 +47,6 @@ type Report struct {
 	Containers Containers  `json:"containers"`
 	Images     Images      `json:"images"`
 	Volumes    Volumes     `json:"volumes"`
+	Issues     []string    `json:"issues"`
 	Timestamp  time.Time   `json:"timestamp"`
 }

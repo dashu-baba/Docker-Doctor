@@ -12,13 +12,15 @@ import (
 	dtypes "github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
 
+	"github.com/example/docker-doctor/internal/config"
 	"github.com/example/docker-doctor/internal/types"
 )
 
 // Collect gathers all the required data for the report.
-func Collect(ctx context.Context, apiVersion string) (*types.Report, error) {
+func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types.Report, error) {
 	report := &types.Report{
 		Timestamp: time.Now(),
+		Issues:    []string{},
 	}
 
 	// Collect host info
@@ -56,6 +58,9 @@ func Collect(ctx context.Context, apiVersion string) (*types.Report, error) {
 	}
 	report.Volumes = *volumes
 
+	// Run diagnostics
+	diagnose(report, cfg)
+
 	return report, nil
 }
 
@@ -63,34 +68,39 @@ func collectHostInfo() (*types.HostInfo, error) {
 	info := &types.HostInfo{
 		OS:        runtime.GOOS,
 		Arch:      runtime.GOARCH,
-		DiskUsage: make(map[string]uint64),
+		DiskUsage: make(map[string]*types.DiskInfo),
 	}
 
 	// Get disk usage for root
-	if usage, err := getDiskUsage("/"); err == nil {
-		info.DiskUsage["/"] = usage
+	if diskInfo, err := getDiskUsage("/"); err == nil {
+		info.DiskUsage["/"] = diskInfo
 	}
 
 	// Get disk usage for /var/lib/docker if exists
 	dockerPath := "/var/lib/docker"
 	if _, err := os.Stat(dockerPath); err == nil {
-		if usage, err := getDiskUsage(dockerPath); err == nil {
-			info.DiskUsage[dockerPath] = usage
+		if diskInfo, err := getDiskUsage(dockerPath); err == nil {
+			info.DiskUsage[dockerPath] = diskInfo
 		}
 	}
 
 	return info, nil
 }
 
-func getDiskUsage(path string) (uint64, error) {
+func getDiskUsage(path string) (*types.DiskInfo, error) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(path, &stat); err != nil {
-		return 0, err
+		return nil, err
 	}
-	// Used bytes = total - available
 	total := stat.Blocks * uint64(stat.Bsize)
 	available := stat.Bavail * uint64(stat.Bsize)
-	return total - available, nil
+	used := total - available
+	usedPercent := float64(used) / float64(total) * 100
+	return &types.DiskInfo{
+		Used:        used,
+		Total:       total,
+		UsedPercent: usedPercent,
+	}, nil
 }
 
 func newClient(apiVersion string) (*client.Client, error) {
@@ -193,4 +203,13 @@ func collectVolumes(ctx context.Context, apiVersion string) (*types.Volumes, err
 	}
 
 	return vol, nil
+}
+
+func diagnose(report *types.Report, cfg *config.Config) {
+	// Check disk usage
+	for path, disk := range report.Host.DiskUsage {
+		if disk.UsedPercent > float64(cfg.Rules.DiskUsage.Threshold) {
+			report.Issues = append(report.Issues, fmt.Sprintf("Disk usage for %s is %.2f%%, exceeds threshold %d%%", path, disk.UsedPercent, cfg.Rules.DiskUsage.Threshold))
+		}
+	}
 }
