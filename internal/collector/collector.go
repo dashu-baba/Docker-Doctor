@@ -2,7 +2,12 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"sort"
@@ -60,10 +65,102 @@ func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types
 	}
 	report.Volumes = *volumes
 
+	// Best-effort: Docker system df (deduplicated disk usage)
+	// This reduces confusion vs summing image sizes (which can overcount shared layers).
+	df, _ := collectDockerSystemDF(ctx, apiVersion)
+
 	// Run diagnostics
-	diagnose(report, cfg)
+	diagnose(report, cfg, df)
 
 	return report, nil
+}
+
+type dockerSystemDF struct {
+	LayersSize int64 `json:"LayersSize"`
+	Images     []struct {
+		Size int64 `json:"Size"`
+	} `json:"Images"`
+	Containers []struct {
+		SizeRw int64 `json:"SizeRw"`
+	} `json:"Containers"`
+	Volumes []struct {
+		UsageData struct {
+			Size int64 `json:"Size"`
+		} `json:"UsageData"`
+	} `json:"Volumes"`
+	BuildCache []struct {
+		Size int64 `json:"Size"`
+	} `json:"BuildCache"`
+}
+
+func collectDockerSystemDF(ctx context.Context, apiVersion string) (*dockerSystemDF, error) {
+	host := os.Getenv("DOCKER_HOST")
+	if host == "" {
+		host = "unix:///var/run/docker.sock"
+	}
+
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+
+	// Docker uses "tcp://" scheme for plain HTTP.
+	// url.Parse("tcp://...") keeps Scheme=tcp; we map it to http.
+	base := &url.URL{}
+	var transport *http.Transport
+
+	switch u.Scheme {
+	case "unix":
+		socketPath := u.Path
+		transport = &http.Transport{
+			DisableCompression: true,
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.DialTimeout("unix", socketPath, 32*time.Second)
+			},
+		}
+		base.Scheme = "http"
+		base.Host = "docker" // dummy, ignored by unix transport
+	case "tcp", "http", "https":
+		base.Scheme = "http"
+		if u.Scheme == "https" {
+			base.Scheme = "https"
+		}
+		base.Host = u.Host
+		base.Path = strings.TrimSuffix(u.Path, "/")
+		transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout: 32 * time.Second,
+			}).DialContext,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported DOCKER_HOST scheme: %s", u.Scheme)
+	}
+
+	client := &http.Client{Transport: transport}
+	path := fmt.Sprintf("/v%s/system/df", strings.TrimPrefix(apiVersion, "v"))
+	reqURL := base.ResolveReference(&url.URL{Path: path})
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("system df request failed: %s (%s)", resp.Status, strings.TrimSpace(string(b)))
+	}
+
+	var df dockerSystemDF
+	if err := json.NewDecoder(resp.Body).Decode(&df); err != nil {
+		return nil, err
+	}
+	return &df, nil
 }
 
 func collectHostInfo() (*types.HostInfo, error) {
@@ -162,8 +259,10 @@ func collectContainers(ctx context.Context, apiVersion string) (*types.Container
 		oomKilled := false
 		healthStatus := "none"
 		var unhealthySince time.Time
+		restartCount := 0
 		if err == nil {
 			oomKilled = inspect.State.OOMKilled
+			restartCount = inspect.RestartCount
 			// Health checks not available in this API version
 			// Assume healthy if running
 		}
@@ -172,7 +271,7 @@ func collectContainers(ctx context.Context, apiVersion string) (*types.Container
 		cont.List = append(cont.List, types.ContainerInfo{
 			ID:             c.ID[:12],  // short ID
 			Name:           c.Names[0], // first name
-			RestartCount:   0,          // not available in list
+			RestartCount:   restartCount,
 			Status:         c.Status,
 			OOMKilled:      oomKilled,
 			HealthStatus:   healthStatus,
@@ -237,7 +336,7 @@ func collectVolumes(ctx context.Context, apiVersion string) (*types.Volumes, err
 	return vol, nil
 }
 
-func diagnose(report *types.Report, cfg *config.Config) {
+func diagnose(report *types.Report, cfg *config.Config, df *dockerSystemDF) {
 	// Check disk usage
 	for path, disk := range report.Host.DiskUsage {
 		if disk.UsedPercent > float64(cfg.Rules.DiskUsage.Threshold) {
@@ -288,16 +387,38 @@ func diagnose(report *types.Report, cfg *config.Config) {
 	}
 
 	// Check storage bloat
-	if report.Images.TotalSize > cfg.Rules.StorageBloat.ImageSizeThreshold {
+	// Prefer deduplicated usage from /system/df when available; otherwise fall back to sum(image.Size).
+	imageSizeObserved := report.Images.TotalSize
+	measurement := "image_list_sum"
+	buildCacheSize := uint64(0)
+	if df != nil {
+		if df.LayersSize > 0 {
+			imageSizeObserved = uint64(df.LayersSize)
+			measurement = "system_df_layers_size"
+		}
+		var bc int64
+		for _, e := range df.BuildCache {
+			if e.Size > 0 {
+				bc += e.Size
+			}
+		}
+		if bc > 0 {
+			buildCacheSize = uint64(bc)
+		}
+	}
+
+	if imageSizeObserved > cfg.Rules.StorageBloat.ImageSizeThreshold {
 		severity := "medium"
-		if report.Images.TotalSize > cfg.Rules.StorageBloat.ImageSizeThreshold*2 {
+		if imageSizeObserved > cfg.Rules.StorageBloat.ImageSizeThreshold*2 {
 			severity = "high"
 		}
 
 		facts := map[string]interface{}{
 			"total_images":     report.Images.Count,
-			"total_image_size": report.Images.TotalSize,
+			"total_image_size": imageSizeObserved,
 			"size_threshold":   cfg.Rules.StorageBloat.ImageSizeThreshold,
+			"measurement":      measurement,
+			"build_cache_size": buildCacheSize,
 		}
 
 		issue := types.Issue{
@@ -305,11 +426,13 @@ func diagnose(report *types.Report, cfg *config.Config) {
 			Subject:     "images_total",
 			Severity:    severity,
 			Category:    "storage_bloat",
-			Description: fmt.Sprintf("Total Docker image size is %d bytes, exceeding threshold of %d bytes", report.Images.TotalSize, cfg.Rules.StorageBloat.ImageSizeThreshold),
+			Description: fmt.Sprintf("Docker image disk usage is %d bytes, exceeding threshold of %d bytes", imageSizeObserved, cfg.Rules.StorageBloat.ImageSizeThreshold),
 			Facts:       facts,
 			Solutions: []string{
-				"Run 'docker images' to list images and their sizes.",
+				"Run 'docker system df' to see deduplicated disk usage and reclaimable space.",
+				"List images: 'docker images' (or 'docker image ls') and remove unused ones.",
 				"Remove unused images: 'docker image prune -a'",
+				"Prune build cache: 'docker builder prune' (or 'docker builder prune -a' for more).",
 				"Use multi-stage builds to reduce image sizes.",
 				"Consider using smaller base images.",
 			},
@@ -319,11 +442,15 @@ func diagnose(report *types.Report, cfg *config.Config) {
 
 	// Check container restarts
 	for _, container := range report.Containers.List {
-		if strings.Contains(strings.ToLower(container.Status), "restarting") {
+		isRestarting := strings.Contains(strings.ToLower(container.Status), "restarting")
+		overThreshold := container.RestartCount > cfg.Rules.Restarts.Threshold
+		if isRestarting || overThreshold {
 			facts := map[string]interface{}{
 				"container_id":   container.ID,
 				"container_name": container.Name,
 				"status":         container.Status,
+				"restart_count":  container.RestartCount,
+				"threshold":      cfg.Rules.Restarts.Threshold,
 			}
 
 			issue := types.Issue{
@@ -331,7 +458,7 @@ func diagnose(report *types.Report, cfg *config.Config) {
 				Subject:     "container=" + container.ID,
 				Severity:    "high",
 				Category:    "restarts",
-				Description: fmt.Sprintf("Container %s (%s) is in restarting state", container.Name, container.ID),
+				Description: fmt.Sprintf("Container %s (%s) is restarting or exceeded restart threshold", container.Name, container.ID),
 				Facts:       facts,
 				Solutions: []string{
 					fmt.Sprintf("Check logs: 'docker logs %s'", container.ID),
