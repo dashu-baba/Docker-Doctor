@@ -30,6 +30,8 @@ type Rules struct {
 	OOM          OOMRule          `yaml:"oom"`
 	Healthcheck  HealthcheckRule  `yaml:"healthcheck"`
 	LogBloat     LogBloatRule     `yaml:"log_bloat"`
+	VolumeBloat  VolumeBloatRule  `yaml:"volume_bloat"`
+	VolumeSize   VolumeSizeRule   `yaml:"volume_size"`
 }
 
 // DiskUsageRule defines rules for disk usage checks.
@@ -60,6 +62,18 @@ type HealthcheckRule struct {
 
 // LogBloatRule defines rules for container log bloat checks.
 type LogBloatRule struct {
+	Enabled       bool   `yaml:"enabled"`
+	SizeThreshold uint64 `yaml:"size_threshold"` // in bytes
+}
+
+// VolumeBloatRule defines rules for volume bloat checks.
+type VolumeBloatRule struct {
+	Enabled       bool   `yaml:"enabled"`
+	SizeThreshold uint64 `yaml:"size_threshold"` // in bytes
+}
+
+// VolumeSizeRule defines rules for individual volume size checks.
+type VolumeSizeRule struct {
 	Enabled       bool   `yaml:"enabled"`
 	SizeThreshold uint64 `yaml:"size_threshold"` // in bytes
 }
@@ -134,7 +148,13 @@ func (r *Rules) Validate() error {
 	if err := r.Healthcheck.Validate(); err != nil {
 		return err
 	}
-	return r.LogBloat.Validate()
+	if err := r.LogBloat.Validate(); err != nil {
+		return err
+	}
+	if err := r.VolumeBloat.Validate(); err != nil {
+		return err
+	}
+	return r.VolumeSize.Validate()
 }
 
 // Validate checks the DiskUsageRule for correctness.
@@ -180,6 +200,22 @@ func (h *HealthcheckRule) Validate() error {
 func (l *LogBloatRule) Validate() error {
 	if l.SizeThreshold < 0 {
 		return fmt.Errorf("log_bloat size_threshold must be non-negative, got %d", l.SizeThreshold)
+	}
+	return nil
+}
+
+// Validate checks the VolumeBloatRule for correctness.
+func (v *VolumeBloatRule) Validate() error {
+	if v.SizeThreshold < 0 {
+		return fmt.Errorf("volume_bloat size_threshold must be non-negative, got %d", v.SizeThreshold)
+	}
+	return nil
+}
+
+// Validate checks the VolumeSizeRule for correctness.
+func (v *VolumeSizeRule) Validate() error {
+	if v.SizeThreshold < 0 {
+		return fmt.Errorf("volume_size size_threshold must be non-negative, got %d", v.SizeThreshold)
 	}
 	return nil
 }

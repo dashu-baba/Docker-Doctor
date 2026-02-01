@@ -21,6 +21,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 			OOM:          config.OOMRule{Enabled: true},
 			Healthcheck:  config.HealthcheckRule{Enabled: true},
 			LogBloat:     config.LogBloatRule{Enabled: true, SizeThreshold: 100},
+			VolumeSize:   config.VolumeSizeRule{Enabled: true, SizeThreshold: 2000000000}, // 2GB
 		},
 	}
 
@@ -51,10 +52,11 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 			},
 		},
 		Volumes: types.Volumes{
-			Count: 2,
+			Count: 3,
 			List: []types.VolumeInfo{
-				{Name: "vol1", Size: 100, Used: false},
-				{Name: "vol2", Size: 200, Used: true},
+				{Name: "vol1", Size: 100, SizeAvailable: true, Used: false},
+				{Name: "vol2", Size: 3000000000, SizeAvailable: true, Used: true}, // 3GB > 2GB
+				{Name: "vol3", Size: 0, SizeAvailable: false, Used: false}, // unavailable
 			},
 		},
 		Networks: types.Networks{
@@ -87,6 +89,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 		"HEALTHCHECK_UNHEALTHY",
 		"LOG_BLOAT",
 		"VOLUME_BLOAT",
+		"VOLUME_SIZE_HIGH",
 		"NETWORK_OVERLAP",
 	} {
 		if !seen[want] {
@@ -111,7 +114,7 @@ func TestEvaluate_StorageBloat_PrefersSystemDf(t *testing.T) {
 		},
 		Volumes: types.Volumes{
 			Count: 1,
-			List:  []types.VolumeInfo{{Name: "vol1", Size: 50, Used: false}},
+			List:  []types.VolumeInfo{{Name: "vol1", Size: 50, SizeAvailable: true, Used: false}},
 		},
 		Networks: types.Networks{
 			Count: 2,

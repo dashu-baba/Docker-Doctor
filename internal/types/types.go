@@ -61,9 +61,10 @@ type Images struct {
 
 // VolumeInfo holds information about a volume.
 type VolumeInfo struct {
-	Name string `json:"name"`
-	Size uint64 `json:"size"`
-	Used bool   `json:"used"`
+	Name         string `json:"name"`
+	Size         uint64 `json:"size"`
+	SizeAvailable bool   `json:"size_available"`
+	Used         bool   `json:"used"`
 }
 
 // Volumes holds volume count and detailed list.

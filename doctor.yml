@@ -20,3 +20,9 @@ rules:
   log_bloat:
     enabled: true
     size_threshold: 104857600  # 100MB
+  volume_bloat:
+    enabled: true
+    size_threshold: 1073741824  # 1GB
+  volume_size:
+    enabled: true
+    size_threshold: 2147483648  # 2GB

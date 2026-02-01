@@ -28,11 +28,13 @@ func collectVolumes(ctx context.Context, dockerHost string, apiVersion string, u
 	}
 	for _, v := range volumes.Volumes {
 		size := uint64(0)
+		sizeAvailable := false
 		if s, err := getVolumeSize(v.Name); err == nil {
 			size = s
+			sizeAvailable = true
 		}
 		used := usedVolumes[v.Name]
-		vol.List = append(vol.List, types.VolumeInfo{Name: v.Name, Size: size, Used: used})
+		vol.List = append(vol.List, types.VolumeInfo{Name: v.Name, Size: size, SizeAvailable: sizeAvailable, Used: used})
 	}
 	return vol, nil
 }

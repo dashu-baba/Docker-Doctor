@@ -218,7 +218,7 @@ func mapIssueToFinding(is types.Issue) Finding {
 	switch is.RuleID {
 	case "DISK_USAGE_HIGH":
 		category = "host"
-	case "DOCKER_STORAGE_BLOAT", "LOG_BLOAT", "VOLUME_BLOAT":
+	case "DOCKER_STORAGE_BLOAT", "LOG_BLOAT", "VOLUME_BLOAT", "VOLUME_SIZE_HIGH":
 		category = "storage"
 	case "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY":
 		category = "stability"
@@ -242,6 +242,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		title = "Container logs are bloated"
 	case "VOLUME_BLOAT":
 		title = "Unused Docker volumes detected"
+	case "VOLUME_SIZE_HIGH":
+		title = "Large Docker volumes detected"
 	case "NETWORK_OVERLAP":
 		title = "Docker network CIDRs overlap"
 	}
