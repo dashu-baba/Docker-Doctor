@@ -26,7 +26,8 @@ containers, images, volumes, and disk usage. Writes scan.json + human reports.`,
 		outputDir, _ := cmd.Flags().GetString("output-dir")
 		formats, _ := cmd.Flags().GetString("formats")
 		apiVersion, _ := cmd.Flags().GetString("api-version")
-		return runScan(outputDir, formats, apiVersion)
+		exitCode, _ := cmd.Flags().GetBool("exit-code")
+		return runScan(outputDir, formats, apiVersion, exitCode)
 	},
 }
 
@@ -44,9 +45,10 @@ func init() {
 	scanCmd.Flags().StringP("output-dir", "o", "./out", "Output directory. Artifacts are written to <output-dir>/<scanId>/")
 	scanCmd.Flags().String("formats", "json,html,md", "Comma-separated output formats: json,html,md")
 	scanCmd.Flags().String("api-version", "", "Docker API version to use (overrides config)")
+	scanCmd.Flags().Bool("exit-code", false, "If set, exit non-zero when findings are WARN/CRITICAL (CI mode)")
 }
 
-func runScan(outputDir string, formats string, apiVersion string) error {
+func runScan(outputDir string, formats string, apiVersion string, exitCode bool) error {
 	startedAt := time.Now()
 
 	cfg, err := config.Load(configFile)
@@ -127,11 +129,16 @@ func runScan(outputDir string, formats string, apiVersion string) error {
 		fmt.Printf("Wrote %d artifact(s) to %s\n", len(written), runDir)
 	}
 
-	code := scanExitCode(report)
-	if code == 0 {
-		return nil
+	if exitCode {
+		code := scanExitCode(report)
+		if code == 0 {
+			return nil
+		}
+		return ExitError{Code: code, Err: nil}
 	}
-	return ExitError{Code: code, Err: nil}
+
+	// Default UX: scan success is exit 0, even if findings exist.
+	return nil
 }
 
 func parseFormats(s string) map[string]bool {
