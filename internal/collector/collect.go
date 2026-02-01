@@ -54,6 +54,13 @@ func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types
 		return nil, fmt.Errorf("failed to collect volumes: %w", err)
 	}
 	report.Volumes = *volumes
+
+	networks, err := collectNetworks(ctx, cfg.Scan.DockerHost, apiVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect networks: %w", err)
+	}
+	report.Networks = *networks
+
 	if log != nil {
 		log.Printf("collector docker: ok (%dms)", time.Since(dockerStart).Milliseconds())
 	}

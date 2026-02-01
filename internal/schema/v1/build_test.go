@@ -20,6 +20,7 @@ func TestBuildFromV0_HasRequiredTopLevelFields(t *testing.T) {
 		Containers: types.Containers{Count: 0, List: nil},
 		Images:     types.Images{Count: 0, List: nil, TotalSize: 0},
 		Volumes:    types.Volumes{Count: 0, List: nil},
+		Networks:   types.Networks{Count: 0, List: nil},
 		Issues:     []types.Issue{},
 		Timestamp:  time.Now(),
 	}
