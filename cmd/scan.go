@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,13 +19,14 @@ import (
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
-	Short: "Scan the Docker host and generate a JSON report",
+	Short: "Scan the Docker host and generate reports",
 	Long: `Scan the Docker host to collect metadata about the host, Docker daemon,
-containers, images, volumes, and disk usage. Outputs the report in JSON format.`,
+containers, images, volumes, and disk usage. Writes scan.json + human reports.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		output, _ := cmd.Flags().GetString("output")
+		outputDir, _ := cmd.Flags().GetString("output-dir")
+		formats, _ := cmd.Flags().GetString("formats")
 		apiVersion, _ := cmd.Flags().GetString("api-version")
-		return runScan(output, apiVersion)
+		return runScan(outputDir, formats, apiVersion)
 	},
 }
 
@@ -39,11 +41,12 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	scanCmd.Flags().StringP("output", "o", "", "Output file for the JSON report (default stdout)")
+	scanCmd.Flags().StringP("output-dir", "o", "./out", "Output directory. Artifacts are written to <output-dir>/<scanId>/")
+	scanCmd.Flags().String("formats", "json,html,md", "Comma-separated output formats: json,html,md")
 	scanCmd.Flags().String("api-version", "", "Docker API version to use (overrides config)")
 }
 
-func runScan(output string, apiVersion string) error {
+func runScan(outputDir string, formats string, apiVersion string) error {
 	startedAt := time.Now()
 
 	cfg, err := config.Load(configFile)
@@ -69,20 +72,59 @@ func runScan(output string, apiVersion string) error {
 
 	finishedAt := time.Now()
 
-	// v0 output is deprecated; emit v1 schema by default.
 	v1Report := v1.BuildFromV0(ctx, report, cfg, apiVersion, startedAt, finishedAt)
-	data, err := json.MarshalIndent(v1Report, "", "  ")
-	if err != nil {
-		return ExitError{Code: 3, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
+
+	selected := parseFormats(formats)
+	if len(selected) == 0 {
+		return ExitError{Code: 3, Err: fmt.Errorf("no formats selected (use --formats json,html,md)")}
 	}
 
-	if output == "" {
-		fmt.Println(string(data))
-	} else {
-		if err := os.WriteFile(output, data, 0644); err != nil {
-			return ExitError{Code: 3, Err: fmt.Errorf("failed to write to file: %w", err)}
+	runDir := filepath.Join(outputDir, v1Report.Scan.ScanID)
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		return ExitError{Code: 3, Err: fmt.Errorf("failed to create output directory: %w", err)}
+	}
+
+	written := []string{}
+
+	// Always allow HTML/MD generation without requiring a separate command.
+	if selected["json"] || selected["html"] || selected["md"] {
+		data, err := json.MarshalIndent(v1Report, "", "  ")
+		if err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
 		}
-		fmt.Printf("Report written to %s\n", output)
+		scanPath := filepath.Join(runDir, "scan.json")
+		if err := os.WriteFile(scanPath, data, 0o644); err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to write scan.json: %w", err)}
+		}
+		written = append(written, scanPath)
+	}
+
+	if selected["html"] {
+		html, err := generateHTMLv1(&v1Report)
+		if err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to generate HTML report: %w", err)}
+		}
+		htmlPath := filepath.Join(runDir, "report.html")
+		if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to write report.html: %w", err)}
+		}
+		written = append(written, htmlPath)
+	}
+
+	if selected["md"] {
+		md, err := generateMarkdownv1(&v1Report)
+		if err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to generate Markdown report: %w", err)}
+		}
+		mdPath := filepath.Join(runDir, "report.md")
+		if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to write report.md: %w", err)}
+		}
+		written = append(written, mdPath)
+	}
+
+	if len(written) > 0 {
+		fmt.Printf("Wrote %d artifact(s) to %s\n", len(written), runDir)
 	}
 
 	code := scanExitCode(report)
@@ -90,6 +132,21 @@ func runScan(output string, apiVersion string) error {
 		return nil
 	}
 	return ExitError{Code: code, Err: nil}
+}
+
+func parseFormats(s string) map[string]bool {
+	out := map[string]bool{}
+	for _, p := range strings.Split(s, ",") {
+		k := strings.ToLower(strings.TrimSpace(p))
+		if k == "" {
+			continue
+		}
+		switch k {
+		case "json", "html", "md":
+			out[k] = true
+		}
+	}
+	return out
 }
 
 func scanExitCode(report *types.Report) int {
