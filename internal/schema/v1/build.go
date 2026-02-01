@@ -288,11 +288,21 @@ func mapIssueToFinding(is types.Issue) Finding {
 		fp += ":global"
 	}
 
+	confidence := "medium"
+	switch is.RuleID {
+	case "DISK_USAGE_HIGH", "VOLUME_SIZE_HIGH", "LOG_BLOAT":
+		confidence = "high" // Relies on host FS access
+	case "DOCKER_STORAGE_BLOAT", "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY", "VOLUME_BLOAT", "NETWORK_OVERLAP":
+		confidence = "medium" // API-based
+	default:
+		confidence = "low"
+	}
+
 	return Finding{
 		ID:              is.RuleID,
 		Fingerprint:     fp,
 		Severity:        severity,
-		Confidence:      "medium",
+		Confidence:      confidence,
 		Category:        category,
 		Title:           title,
 		Summary:         is.Description,
