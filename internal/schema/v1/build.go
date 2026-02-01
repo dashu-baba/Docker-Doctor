@@ -13,7 +13,7 @@ import (
 	"github.com/example/docker-doctor/internal/types"
 )
 
-func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiVersion string, startedAt time.Time, finishedAt time.Time) Report {
+func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiVersion string, startedAt time.Time, finishedAt time.Time, version, gitCommit, buildTime string) Report {
 	df, dfErr := collector.CollectDockerSystemDfSummary(ctx, cfg.Scan.DockerHost, apiVersion)
 
 	containersRunning := 0
@@ -105,9 +105,9 @@ func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiV
 		SchemaVersion: "1.0",
 		Tool: Tool{
 			Name:      "docker-host-doctor",
-			Version:   "dev",
-			GitCommit: "",
-			BuildTime: "",
+			Version:   version,
+			GitCommit: gitCommit,
+			BuildTime: buildTime,
 		},
 		Scan: Scan{
 			ScanID:         newScanID(finishedAt),

@@ -81,7 +81,7 @@ func runScan(outputDir string, formats string, apiVersion string, exitCode bool,
 
 	finishedAt := time.Now()
 
-	v1Report := v1.BuildFromV0(ctx, report, cfg, apiVersion, startedAt, finishedAt)
+	v1Report := v1.BuildFromV0(ctx, report, cfg, apiVersion, startedAt, finishedAt, toolVersion, toolGitCommit, toolBuildTime)
 
 	selected := parseFormats(formats)
 	if len(selected) == 0 {

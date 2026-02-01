@@ -14,10 +14,22 @@ import (
 )
 
 func collectHostInfo() (*types.HostInfo, error) {
-	hostID, _ := generateHostID()
-	hostname, _ := os.Hostname()
-	kernel, _ := getKernelVersion()
-	uptime, _ := getUptimeSeconds()
+	hostID, err := generateHostID()
+	if err != nil {
+		hostID = ""
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = ""
+	}
+	kernel, err := getKernelVersion()
+	if err != nil {
+		kernel = ""
+	}
+	uptime, err := getUptimeSeconds()
+	if err != nil {
+		uptime = 0
+	}
 
 	info := &types.HostInfo{
 		HostID:        hostID,

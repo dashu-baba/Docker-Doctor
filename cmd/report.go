@@ -214,6 +214,11 @@ func generateHTMLv1(report *v1.Report) (string, error) {
         <h3>Target</h3>
         <div class="big">{{.Target.Host.OS}} / {{.Target.Host.Arch}}</div>
         <div class="kv">Docker {{.Target.Docker.EngineVersion}} (API {{.Target.Docker.APIVersion}})</div>
+        {{if .Target.Host.Hostname}}<div class="kv">Hostname: {{.Target.Host.Hostname}}</div>{{end}}
+        {{if .Target.Host.Kernel}}<div class="kv">Kernel: {{.Target.Host.Kernel}}</div>{{end}}
+        {{if gt .Target.Host.UptimeSeconds 0}}<div class="kv">Uptime: {{.Target.Host.UptimeSeconds}}s</div>{{end}}
+        {{if .Target.Docker.CgroupVersion}}<div class="kv">Cgroup Version: {{.Target.Docker.CgroupVersion}}</div>{{end}}
+        {{if .Target.Docker.DataRoot}}<div class="kv">Data Root: {{.Target.Docker.DataRoot}}</div>{{end}}
       </div>
       <div class="card">
         <h3>Counts</h3>
@@ -369,6 +374,11 @@ func generateMarkdownv1(report *v1.Report) (string, error) {
 ## Target
 - **Host:** %s / %s
 - **Docker Engine:** %s (API %s)
+- **Hostname:** %s
+- **Kernel:** %s
+- **Uptime:** %d s
+- **Cgroup Version:** %s
+- **Data Root:** %s
 
 ## Summary
 
@@ -400,6 +410,11 @@ func generateMarkdownv1(report *v1.Report) (string, error) {
 		report.Tool.Name, fallback(report.Tool.Version, "dev"),
 		report.Target.Host.OS, report.Target.Host.Arch,
 		report.Target.Docker.EngineVersion, report.Target.Docker.APIVersion,
+		report.Target.Host.Hostname,
+		report.Target.Host.Kernel,
+		report.Target.Host.UptimeSeconds,
+		report.Target.Docker.CgroupVersion,
+		report.Target.Docker.DataRoot,
 		report.Summary.Counts.ContainersRunning,
 		report.Summary.Counts.ContainersStopped,
 		report.Summary.Counts.Images,

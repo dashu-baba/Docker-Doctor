@@ -39,6 +39,14 @@ func (e ExitError) Error() string {
 	return e.Err.Error()
 }
 
+var toolVersion, toolGitCommit, toolBuildTime string
+
+func SetVersion(version, gitCommit, buildTime string) {
+	toolVersion = version
+	toolGitCommit = gitCommit
+	toolBuildTime = buildTime
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {

@@ -1,7 +1,11 @@
-.PHONY: help test test-integration scan scan-ci clean
+.PHONY: help build test test-integration scan scan-ci clean
+
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
 
 help:
 	@echo "Targets:"
+	@echo "  make build             - Build docker-doctor binary with version info"
 	@echo "  make test              - Run unit tests"
 	@echo "  make test-integration  - Run integration tests (requires env vars)"
 	@echo "  make scan              - Run scan and write to ./out"
@@ -11,6 +15,9 @@ help:
 	@echo "Integration env vars:"
 	@echo "  RUN_INTEGRATION=1"
 	@echo "  DOCKER_HOST=unix:///Users/<you>/.rd/docker.sock (or your engine socket)"
+
+build:
+	go build -ldflags "-X main.version=$(shell git describe --tags --abbrev=0 2>/dev/null || echo dev) -X main.gitCommit=$(GIT_COMMIT) -X main.buildTime=$(BUILD_TIME)" .
 
 test:
 	go test ./...

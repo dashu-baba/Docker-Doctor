@@ -33,7 +33,7 @@ func TestBuildFromV0_HasRequiredTopLevelFields(t *testing.T) {
 		},
 	}
 
-	r := BuildFromV0(context.Background(), v0, cfg, "1.41", time.Now().Add(-time.Second), time.Now())
+	r := BuildFromV0(context.Background(), v0, cfg, "1.41", time.Now().Add(-time.Second), time.Now(), "dev", "", "")
 
 	b, err := json.Marshal(r)
 	if err != nil {
