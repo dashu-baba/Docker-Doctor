@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/example/docker-doctor/internal/collector"
 	"github.com/example/docker-doctor/internal/config"
+	"github.com/example/docker-doctor/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +45,7 @@ func init() {
 func runScan(output string, apiVersion string) error {
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		return err
+		return ExitError{Code: 3, Err: err}
 	}
 
 	// Use config values, override with flags if provided
@@ -59,22 +61,44 @@ func runScan(output string, apiVersion string) error {
 
 	report, err := collector.Collect(ctx, apiVersion, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to collect data: %w", err)
+		return ExitError{Code: 3, Err: fmt.Errorf("failed to collect data: %w", err)}
 	}
 
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %w", err)
+		return ExitError{Code: 3, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
 	}
 
 	if output == "" {
 		fmt.Println(string(data))
 	} else {
 		if err := os.WriteFile(output, data, 0644); err != nil {
-			return fmt.Errorf("failed to write to file: %w", err)
+			return ExitError{Code: 3, Err: fmt.Errorf("failed to write to file: %w", err)}
 		}
 		fmt.Printf("Report written to %s\n", output)
 	}
 
-	return nil
+	code := scanExitCode(report)
+	if code == 0 {
+		return nil
+	}
+	return ExitError{Code: code, Err: nil}
+}
+
+func scanExitCode(report *types.Report) int {
+	issues := report.Issues
+	hasMedium := false
+	for _, is := range issues {
+		switch strings.ToLower(is.Severity) {
+		case "high":
+			return 2
+		case "medium":
+			hasMedium = true
+		}
+	}
+	if hasMedium {
+		return 1
+	}
+	// Treat only-low issues as OK for now (info-level).
+	return 0
 }

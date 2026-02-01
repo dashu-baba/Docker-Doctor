@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -179,6 +180,14 @@ func collectContainers(ctx context.Context, apiVersion string) (*types.Container
 		})
 	}
 
+	// Deterministic ordering for diff-friendly output
+	sort.Slice(cont.List, func(i, j int) bool {
+		if cont.List[i].Name != cont.List[j].Name {
+			return cont.List[i].Name < cont.List[j].Name
+		}
+		return cont.List[i].ID < cont.List[j].ID
+	})
+
 	return cont, nil
 }
 
@@ -266,6 +275,8 @@ func diagnose(report *types.Report, cfg *config.Config) {
 			}
 
 			issue := types.Issue{
+				RuleID:      "DISK_USAGE_HIGH",
+				Subject:     "path=" + path,
 				Severity:    severity,
 				Category:    "disk_usage",
 				Description: fmt.Sprintf("Disk usage for %s is %.2f%%, exceeding threshold of %d%%", path, disk.UsedPercent, cfg.Rules.DiskUsage.Threshold),
@@ -290,6 +301,8 @@ func diagnose(report *types.Report, cfg *config.Config) {
 		}
 
 		issue := types.Issue{
+			RuleID:      "DOCKER_STORAGE_BLOAT",
+			Subject:     "images_total",
 			Severity:    severity,
 			Category:    "storage_bloat",
 			Description: fmt.Sprintf("Total Docker image size is %d bytes, exceeding threshold of %d bytes", report.Images.TotalSize, cfg.Rules.StorageBloat.ImageSizeThreshold),
@@ -314,6 +327,8 @@ func diagnose(report *types.Report, cfg *config.Config) {
 			}
 
 			issue := types.Issue{
+				RuleID:      "RESTART_LOOP",
+				Subject:     "container=" + container.ID,
 				Severity:    "high",
 				Category:    "restarts",
 				Description: fmt.Sprintf("Container %s (%s) is in restarting state", container.Name, container.ID),
@@ -341,6 +356,8 @@ func diagnose(report *types.Report, cfg *config.Config) {
 				}
 
 				issue := types.Issue{
+					RuleID:      "OOM_KILLED",
+					Subject:     "container=" + container.ID,
 					Severity:    "high",
 					Category:    "oom",
 					Description: fmt.Sprintf("Container %s (%s) was killed due to out-of-memory condition", container.Name, container.ID),
@@ -378,6 +395,8 @@ func diagnose(report *types.Report, cfg *config.Config) {
 				}
 
 				issue := types.Issue{
+					RuleID:      "HEALTHCHECK_UNHEALTHY",
+					Subject:     "container=" + container.ID,
 					Severity:    severity,
 					Category:    "healthcheck",
 					Description: fmt.Sprintf("Container %s (%s) has been unhealthy for %s", container.Name, container.ID, duration.Round(time.Second)),
@@ -395,4 +414,27 @@ func diagnose(report *types.Report, cfg *config.Config) {
 			}
 		}
 	}
+
+	// Deterministic ordering for diff-friendly output
+	severityRank := func(s string) int {
+		switch strings.ToLower(s) {
+		case "high":
+			return 0
+		case "medium":
+			return 1
+		case "low":
+			return 2
+		default:
+			return 3
+		}
+	}
+	sort.Slice(report.Issues, func(i, j int) bool {
+		if severityRank(report.Issues[i].Severity) != severityRank(report.Issues[j].Severity) {
+			return severityRank(report.Issues[i].Severity) < severityRank(report.Issues[j].Severity)
+		}
+		if report.Issues[i].RuleID != report.Issues[j].RuleID {
+			return report.Issues[i].RuleID < report.Issues[j].RuleID
+		}
+		return report.Issues[i].Subject < report.Issues[j].Subject
+	})
 }
