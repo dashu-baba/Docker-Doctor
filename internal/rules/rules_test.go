@@ -31,6 +31,13 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 				"/": {Used: 90, Total: 100, UsedPercent: 90.0},
 			},
 		},
+		Docker: types.DockerInfo{
+			Version: "1.2.3",
+			DaemonInfo: map[string]interface{}{
+				"storage_driver": "overlay2",
+				"experimental":   true, // risky setting
+			},
+		},
 		Images: types.Images{
 			Count:     1,
 			TotalSize: 11, // above threshold 10
@@ -91,6 +98,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 		"VOLUME_BLOAT",
 		"VOLUME_SIZE_HIGH",
 		"NETWORK_OVERLAP",
+		"DAEMON_RISKY_SETTINGS",
 	} {
 		if !seen[want] {
 			t.Fatalf("expected ruleId %s to be produced, got %+v", want, seen)

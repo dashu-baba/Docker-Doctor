@@ -104,6 +104,17 @@ docker compose down --remove-orphans
   - Creates a 50MB file in the volume
   - Useful for validating volume size collection
 
+### `daemon-risky/` (configuration validation)
+
+- **Goal**: trigger `DAEMON_RISKY_SETTINGS`
+- **How**: requires Docker daemon configured with risky settings (experimental, insecure registries, etc.)
+- **Expected finding**:
+  - `DAEMON_RISKY_SETTINGS` (severity: medium/high)
+- **Notes**:
+  - Requires manual daemon configuration
+  - Cannot be automated with docker-compose
+  - See `daemon-risky/README.md` for setup instructions
+
 ## Notes
 
 - The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).

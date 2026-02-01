@@ -224,6 +224,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		category = "stability"
 	case "NETWORK_OVERLAP":
 		category = "networking"
+	case "DAEMON_RISKY_SETTINGS":
+		category = "configuration"
 	}
 
 	title := is.RuleID
@@ -246,6 +248,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		title = "Large Docker volumes detected"
 	case "NETWORK_OVERLAP":
 		title = "Docker network CIDRs overlap"
+	case "DAEMON_RISKY_SETTINGS":
+		title = "Docker daemon has risky settings"
 	}
 
 	scope := Scope{}
@@ -292,7 +296,7 @@ func mapIssueToFinding(is types.Issue) Finding {
 	switch is.RuleID {
 	case "DISK_USAGE_HIGH", "VOLUME_SIZE_HIGH", "LOG_BLOAT":
 		confidence = "high" // Relies on host FS access
-	case "DOCKER_STORAGE_BLOAT", "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY", "VOLUME_BLOAT", "NETWORK_OVERLAP":
+	case "DOCKER_STORAGE_BLOAT", "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY", "VOLUME_BLOAT", "NETWORK_OVERLAP", "DAEMON_RISKY_SETTINGS":
 		confidence = "medium" // API-based
 	default:
 		confidence = "low"

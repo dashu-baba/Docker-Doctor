@@ -23,10 +23,13 @@ func collectDockerInfo(ctx context.Context, dockerHost string, apiVersion string
 	}
 
 	daemonInfo := map[string]interface{}{
-		"server_version": info.ServerVersion,
-		"os":             info.OSType,
-		"arch":           info.Architecture,
-		"storage_driver": info.Driver,
+		"server_version":  info.ServerVersion,
+		"os":              info.OSType,
+		"arch":            info.Architecture,
+		"storage_driver":  info.Driver,
+		"experimental":    info.ExperimentalBuild,
+		"logging_driver":  info.LoggingDriver,
+		"registry_config": info.RegistryConfig,
 	}
 
 	// Note: CgroupVersion and DockerRootDir may not be available in older API versions

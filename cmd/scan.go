@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -57,6 +58,12 @@ func runScan(outputDir string, formats string, apiVersion string, exitCode bool,
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		return ExitError{Code: 3, Err: err}
+	}
+
+	// Check full mode availability
+	if cfg.Scan.Mode == "full" && runtime.GOOS != "linux" {
+		fmt.Fprintf(os.Stderr, "Warning: Full scan mode is not supported on %s. Host filesystem access is required for full scans. Falling back to basic mode.\n", runtime.GOOS)
+		cfg.Scan.Mode = "basic"
 	}
 
 	// Use config values, override with flags if provided
