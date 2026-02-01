@@ -1,0 +1,10 @@
+services:
+  volume-filler:
+    image: alpine:latest
+    volumes:
+      - large_vol:/data
+    command: ["sh", "-c", "dd if=/dev/zero of=/data/large_file bs=1M count=50 && echo 'Created 50MB file' && sleep infinity"]
+
+volumes:
+  large_vol:
+    driver: local

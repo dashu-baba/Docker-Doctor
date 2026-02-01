@@ -89,6 +89,21 @@ docker compose down --remove-orphans
 - **Expected finding**:
   - `NETWORK_OVERLAP` (severity: `high`)
 
+### `volume-bloat/` (rule validation)
+
+- **Goal**: trigger `VOLUME_BLOAT`
+- **How**: creates Docker volumes where some are used by containers and some are unused
+- **Expected finding**:
+  - `VOLUME_BLOAT` (severity: `low` or `medium` depending on unused count)
+
+### `volume-large/` (workload generator)
+
+- **Purpose**: creates a Docker volume with large content for testing volume size detection
+- **Expected Doctor finding today**: none (volume sizes are informational)
+- **Notes**:
+  - Creates a 50MB file in the volume
+  - Useful for validating volume size collection
+
 ## Notes
 
 - The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).

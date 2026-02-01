@@ -1,0 +1,22 @@
+services:
+  app1:
+    image: nginx:alpine
+    volumes:
+      - used_vol:/data
+    command: ["sh", "-c", "echo 'test data' > /data/file.txt && sleep infinity"]
+
+  app2:
+    image: nginx:alpine
+    volumes:
+      - another_used_vol:/app/logs
+    command: ["sh", "-c", "mkdir -p /app/logs && echo 'log data' > /app/logs/app.log && sleep infinity"]
+
+volumes:
+  used_vol:
+    driver: local
+  unused_vol1:
+    driver: local
+  unused_vol2:
+    driver: local
+  another_used_vol:
+    driver: local
