@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +32,19 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// cidrsOverlap checks if two CIDR strings overlap
+func cidrsOverlap(cidr1, cidr2 string) bool {
+	if cidr1 == "" || cidr2 == "" {
+		return false
+	}
+	_, net1, err1 := net.ParseCIDR(cidr1)
+	_, net2, err2 := net.ParseCIDR(cidr2)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	return net1.Contains(net2.IP) || net2.Contains(net1.IP) || net1.IP.Equal(net2.IP)
 }
 
 func humanBytes(v uint64) string {
@@ -363,6 +377,45 @@ func Evaluate(report *types.Report, cfg *config.Config, df *facts.DockerSystemDf
 				Description: fmt.Sprintf("Found %d unused Docker volumes that can be cleaned up", len(unusedVolumes)),
 				Facts:       facts,
 				Solutions:   solutions,
+			})
+		}
+	}
+
+	// NETWORK_OVERLAP
+	if true { // Always check networks
+		var overlapping []string
+		checked := make(map[int]bool)
+
+		for i, net1 := range report.Networks.List {
+			for j, net2 := range report.Networks.List {
+				if i >= j || checked[i*len(report.Networks.List)+j] {
+					continue
+				}
+				checked[i*len(report.Networks.List)+j] = true
+				if cidrsOverlap(net1.CIDR, net2.CIDR) {
+					overlapping = append(overlapping, fmt.Sprintf("%s (%s) and %s (%s)", net1.Name, net1.CIDR, net2.Name, net2.CIDR))
+				}
+			}
+		}
+
+		if len(overlapping) > 0 {
+			report.Issues = append(report.Issues, types.Issue{
+				RuleID:      "NETWORK_OVERLAP",
+				Subject:     "networks_overlap",
+				Severity:    "high",
+				Category:    "networking",
+				Description: fmt.Sprintf("Found %d overlapping Docker network CIDRs that may cause connectivity issues", len(overlapping)),
+				Facts: map[string]interface{}{
+					"overlapping_networks": overlapping,
+					"total_networks":       report.Networks.Count,
+				},
+				Solutions: []string{
+					"Review and reconfigure overlapping network subnets",
+					"Use non-overlapping CIDR ranges for Docker networks",
+					"Remove unnecessary networks: 'docker network rm <network_name>'",
+					"Recreate networks with proper subnets: 'docker network create --subnet <cidr> <name>'",
+					"Check network configurations in docker-compose files",
+				},
 			})
 		}
 	}

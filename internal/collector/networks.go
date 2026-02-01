@@ -21,10 +21,18 @@ func collectNetworks(ctx context.Context, dockerHost string, apiVersion string) 
 
 	net := &types.Networks{
 		Count: len(networks),
-		List:  make([]string, 0, len(networks)),
+		List:  make([]types.NetworkInfo, 0, len(networks)),
 	}
+
+	// Inspect each network to get CIDR
 	for _, n := range networks {
-		net.List = append(net.List, n.Name)
+		cidr := ""
+		if inspect, err := cli.NetworkInspect(n.ID); err == nil {
+			if len(inspect.IPAM.Config) > 0 {
+				cidr = inspect.IPAM.Config[0].Subnet
+			}
+		}
+		net.List = append(net.List, types.NetworkInfo{Name: n.Name, CIDR: cidr})
 	}
 	return net, nil
 }

@@ -1,0 +1,23 @@
+services:
+  app1:
+    image: nginx:alpine
+    networks:
+      - net1
+
+  app2:
+    image: nginx:alpine
+    networks:
+      - net2
+
+networks:
+  net1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+
+  net2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/25  # overlaps with net1

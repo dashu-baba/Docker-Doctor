@@ -222,6 +222,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		category = "storage"
 	case "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY":
 		category = "stability"
+	case "NETWORK_OVERLAP":
+		category = "networking"
 	}
 
 	title := is.RuleID
@@ -240,6 +242,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		title = "Container logs are bloated"
 	case "VOLUME_BLOAT":
 		title = "Unused Docker volumes detected"
+	case "NETWORK_OVERLAP":
+		title = "Docker network CIDRs overlap"
 	}
 
 	scope := Scope{}

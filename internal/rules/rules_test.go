@@ -57,6 +57,14 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 				{Name: "vol2", Size: 200, Used: true},
 			},
 		},
+		Networks: types.Networks{
+			Count: 3,
+			List: []types.NetworkInfo{
+				{Name: "bridge", CIDR: "172.17.0.0/16"},
+				{Name: "net1", CIDR: "192.168.1.0/24"},
+				{Name: "net2", CIDR: "192.168.1.0/25"}, // overlaps with net1
+			},
+		},
 	}
 
 	df := &facts.DockerSystemDfSummary{
@@ -79,6 +87,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 		"HEALTHCHECK_UNHEALTHY",
 		"LOG_BLOAT",
 		"VOLUME_BLOAT",
+		"NETWORK_OVERLAP",
 	} {
 		if !seen[want] {
 			t.Fatalf("expected ruleId %s to be produced, got %+v", want, seen)
@@ -103,6 +112,13 @@ func TestEvaluate_StorageBloat_PrefersSystemDf(t *testing.T) {
 		Volumes: types.Volumes{
 			Count: 1,
 			List:  []types.VolumeInfo{{Name: "vol1", Size: 50, Used: false}},
+		},
+		Networks: types.Networks{
+			Count: 2,
+			List: []types.NetworkInfo{
+				{Name: "bridge", CIDR: "172.17.0.0/16"},
+				{Name: "net1", CIDR: "192.168.1.0/24"},
+			},
 		},
 	}
 	df := &facts.DockerSystemDfSummary{

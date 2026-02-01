@@ -82,6 +82,13 @@ docker compose down --remove-orphans
 - **Expected finding**:
   - `LOG_BLOAT` (severity: `medium` or `high` depending on size)
 
+### `network-overlap/` (rule validation)
+
+- **Goal**: trigger `NETWORK_OVERLAP`
+- **How**: creates Docker networks with overlapping CIDR ranges
+- **Expected finding**:
+  - `NETWORK_OVERLAP` (severity: `high`)
+
 ## Notes
 
 - The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).

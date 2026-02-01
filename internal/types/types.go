@@ -72,10 +72,16 @@ type Volumes struct {
 	List  []VolumeInfo `json:"list"`
 }
 
-// Networks holds network count and basic list.
+// NetworkInfo holds information about a network.
+type NetworkInfo struct {
+	Name string `json:"name"`
+	CIDR string `json:"cidr"`
+}
+
+// Networks holds network count and detailed list.
 type Networks struct {
-	Count int      `json:"count"`
-	List  []string `json:"list"` // network names
+	Count int           `json:"count"`
+	List  []NetworkInfo `json:"list"`
 }
 
 // Issue represents a diagnostic finding.
