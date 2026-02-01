@@ -1,0 +1,10 @@
+services:
+  io-worker:
+    build: .
+    environment:
+      FILE_MB: "1024"
+      DIR: "/data"
+    volumes:
+      - io_data:/data
+volumes:
+  io_data:

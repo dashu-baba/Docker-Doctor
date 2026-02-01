@@ -1,0 +1,6 @@
+services:
+  crashloop:
+    image: alpine:3.20
+    command: ["sh", "-c", "echo 'crashloop: exiting 1'; exit 1"]
+    restart: always
+

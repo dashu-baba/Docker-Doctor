@@ -1,0 +1,10 @@
+services:
+  cpu-worker:
+    build: .
+    environment:
+      THREADS: "4"     # tune
+      MATRIX: "1400"   # tune up/down
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"

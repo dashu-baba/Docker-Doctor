@@ -50,5 +50,3 @@ report.md
 
 doc_ignore/
 *.patch
-
-docker_tests/

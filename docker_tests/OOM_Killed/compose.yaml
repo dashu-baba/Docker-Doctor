@@ -1,0 +1,9 @@
+services:
+  oom-hog:
+    build: .
+    environment:
+      ALLOC_MB: "512"
+    # Compose-local memory limit (works with docker compose v2)
+    mem_limit: 64m
+    restart: "no"
+
