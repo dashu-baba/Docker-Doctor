@@ -46,17 +46,29 @@ type Containers struct {
 	List  []ContainerInfo `json:"list"`
 }
 
-// Images holds image count and basic list.
-type Images struct {
-	Count     int      `json:"count"`
-	List      []string `json:"list"` // image IDs
-	TotalSize uint64   `json:"total_size"` // total size in bytes
+// ImageInfo holds information about an image.
+type ImageInfo struct {
+	ID   string `json:"id"`
+	Size uint64 `json:"size"`
 }
 
-// Volumes holds volume count and basic list.
+// Images holds image count and detailed list.
+type Images struct {
+	Count     int          `json:"count"`
+	List      []ImageInfo  `json:"list"`
+	TotalSize uint64       `json:"total_size"` // total size in bytes
+}
+
+// VolumeInfo holds information about a volume.
+type VolumeInfo struct {
+	Name string `json:"name"`
+	Size uint64 `json:"size"`
+}
+
+// Volumes holds volume count and detailed list.
 type Volumes struct {
-	Count int      `json:"count"`
-	List  []string `json:"list"` // volume names
+	Count int          `json:"count"`
+	List  []VolumeInfo `json:"list"`
 }
 
 // Networks holds network count and basic list.

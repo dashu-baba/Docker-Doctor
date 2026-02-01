@@ -21,10 +21,10 @@ func collectVolumes(ctx context.Context, dockerHost string, apiVersion string) (
 
 	vol := &types.Volumes{
 		Count: len(volumes.Volumes),
-		List:  make([]string, 0, len(volumes.Volumes)),
+		List:  make([]types.VolumeInfo, 0, len(volumes.Volumes)),
 	}
 	for _, v := range volumes.Volumes {
-		vol.List = append(vol.List, v.Name)
+		vol.List = append(vol.List, types.VolumeInfo{Name: v.Name, Size: 0})
 	}
 	return vol, nil
 }

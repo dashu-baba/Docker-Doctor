@@ -30,7 +30,11 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 				"/": {Used: 90, Total: 100, UsedPercent: 90.0},
 			},
 		},
-		Images: types.Images{Count: 1, TotalSize: 0},
+		Images: types.Images{
+			Count:     1,
+			TotalSize: 11, // above threshold 10
+			List:      []types.ImageInfo{{ID: "img1", Size: 11}},
+		},
 		Containers: types.Containers{
 			Count: 1,
 			List: []types.ContainerInfo{
@@ -83,7 +87,11 @@ func TestEvaluate_StorageBloat_PrefersSystemDf(t *testing.T) {
 		},
 	}
 	report := &types.Report{
-		Images: types.Images{Count: 2, TotalSize: 999999999}, // should be ignored when df present
+		Images: types.Images{
+			Count:     2,
+			TotalSize: 999999999, // should be ignored when df present
+			List:      []types.ImageInfo{{ID: "img1", Size: 100}, {ID: "img2", Size: 1}},
+		},
 	}
 	df := &facts.DockerSystemDfSummary{
 		ImagesTotalBytes:     101,

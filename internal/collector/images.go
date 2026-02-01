@@ -21,13 +21,17 @@ func collectImages(ctx context.Context, dockerHost string, apiVersion string) (*
 
 	img := &types.Images{
 		Count:     len(images),
-		List:      make([]string, 0, len(images)),
+		List:      make([]types.ImageInfo, 0, len(images)),
 		TotalSize: 0,
 	}
 	for _, i := range images {
-		img.List = append(img.List, i.ID)
-		if i.Size > 0 {
-			img.TotalSize += uint64(i.Size)
+		size := uint64(i.Size)
+		img.List = append(img.List, types.ImageInfo{
+			ID:   i.ID,
+			Size: size,
+		})
+		if size > 0 {
+			img.TotalSize += size
 		}
 	}
 
