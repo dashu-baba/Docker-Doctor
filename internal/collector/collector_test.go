@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package collector
 
 import (
@@ -9,14 +12,23 @@ import (
 )
 
 func TestCollect(t *testing.T) {
-	// Skip if DOCKER_HOST is not set or docker not available
-	if os.Getenv("DOCKER_HOST") == "" && !fileExists("/var/run/docker.sock") {
-		t.Skip("Docker not available")
+	if os.Getenv("RUN_INTEGRATION") != "1" {
+		t.Skip("set RUN_INTEGRATION=1 to run integration tests")
+	}
+	dockerHost := os.Getenv("DOCKER_HOST")
+	if dockerHost == "" {
+		t.Skip("set DOCKER_HOST (e.g. unix:///var/run/docker.sock or unix:///Users/<you>/.rd/docker.sock)")
 	}
 
 	ctx := context.Background()
 	apiVersion := "1.40"
 	cfg := &config.Config{
+		Scan: config.ScanConfig{
+			Mode:       "basic",
+			Timeout:    30,
+			DockerHost: dockerHost,
+			Version:    apiVersion,
+		},
 		Rules: config.Rules{
 			DiskUsage: config.DiskUsageRule{
 				Threshold: 80,
