@@ -14,7 +14,7 @@ import (
 )
 
 func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiVersion string, startedAt time.Time, finishedAt time.Time) Report {
-	df, _ := collector.CollectDockerSystemDfSummary(ctx, apiVersion)
+	df, dfErr := collector.CollectDockerSystemDfSummary(ctx, cfg.Scan.DockerHost, apiVersion)
 
 	containersRunning := 0
 	containersStopped := 0
@@ -69,11 +69,25 @@ func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiV
 			Errors:     []string{},
 		},
 		{
+			Name:       "docker_system_df",
+			Status:     "ok",
+			DurationMs: 0,
+			Errors:     []string{},
+		},
+		{
 			Name:       "host_fs",
 			Status:     "skipped",
 			DurationMs: 0,
 			Errors:     []string{"host filesystem collector not enabled in this build"},
 		},
+	}
+	if dfErr != nil {
+		for i := range collectors {
+			if collectors[i].Name == "docker_system_df" {
+				collectors[i].Status = "error"
+				collectors[i].Errors = []string{dfErr.Error()}
+			}
+		}
 	}
 	sort.Slice(collectors, func(i, j int) bool { return collectors[i].Name < collectors[j].Name })
 

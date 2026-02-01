@@ -8,19 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
-)
 
-// DockerSystemDfSummary is a simplified, deduplicated snapshot of Docker disk usage.
-// It mirrors the high-level numbers shown in `docker system df`.
-type DockerSystemDfSummary struct {
-	ImagesTotalBytes             uint64
-	ContainersWritableTotalBytes uint64
-	VolumesTotalBytes            uint64
-	BuildCacheTotalBytes         uint64
-}
+	"github.com/example/docker-doctor/internal/facts"
+)
 
 type dockerSystemDFResponse struct {
 	LayersSize int64 `json:"LayersSize"`
@@ -39,13 +31,12 @@ type dockerSystemDFResponse struct {
 
 // CollectDockerSystemDfSummary fetches `/system/df` and returns deduplicated totals.
 // Best-effort callers should treat errors as non-fatal.
-func CollectDockerSystemDfSummary(ctx context.Context, apiVersion string) (*DockerSystemDfSummary, error) {
-	host := os.Getenv("DOCKER_HOST")
-	if host == "" {
-		host = "unix:///var/run/docker.sock"
+func CollectDockerSystemDfSummary(ctx context.Context, dockerHost string, apiVersion string) (*facts.DockerSystemDfSummary, error) {
+	if strings.TrimSpace(dockerHost) == "" {
+		dockerHost = "unix:///var/run/docker.sock"
 	}
 
-	u, err := url.Parse(host)
+	u, err := url.Parse(dockerHost)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +115,7 @@ func CollectDockerSystemDfSummary(ctx context.Context, apiVersion string) (*Dock
 		}
 	}
 
-	out := &DockerSystemDfSummary{
+	out := &facts.DockerSystemDfSummary{
 		ImagesTotalBytes:             uint64(max64(df.LayersSize, 0)),
 		ContainersWritableTotalBytes: uint64(max64(containersRW, 0)),
 		VolumesTotalBytes:            uint64(max64(volumesTotal, 0)),

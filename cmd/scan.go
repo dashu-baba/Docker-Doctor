@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +28,8 @@ containers, images, volumes, and disk usage. Writes scan.json + human reports.`,
 		formats, _ := cmd.Flags().GetString("formats")
 		apiVersion, _ := cmd.Flags().GetString("api-version")
 		exitCode, _ := cmd.Flags().GetBool("exit-code")
-		return runScan(outputDir, formats, apiVersion, exitCode)
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		return runScan(outputDir, formats, apiVersion, exitCode, verbose)
 	},
 }
 
@@ -46,9 +48,10 @@ func init() {
 	scanCmd.Flags().String("formats", "json,html,md", "Comma-separated output formats: json,html,md")
 	scanCmd.Flags().String("api-version", "", "Docker API version to use (overrides config)")
 	scanCmd.Flags().Bool("exit-code", false, "If set, exit non-zero when findings are WARN/CRITICAL (CI mode)")
+	scanCmd.Flags().Bool("verbose", false, "Enable debug logging to stderr")
 }
 
-func runScan(outputDir string, formats string, apiVersion string, exitCode bool) error {
+func runScan(outputDir string, formats string, apiVersion string, exitCode bool, verbose bool) error {
 	startedAt := time.Now()
 
 	cfg, err := config.Load(configFile)
@@ -61,11 +64,15 @@ func runScan(outputDir string, formats string, apiVersion string, exitCode bool)
 		apiVersion = cfg.Scan.Version
 	}
 
-	// Set DOCKER_HOST
-	os.Setenv("DOCKER_HOST", cfg.Scan.DockerHost)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Scan.Timeout)*time.Second)
 	defer cancel()
+
+	// Optional debug logging (kept off by default for clean CLI UX).
+	// Note: we use a lightweight logger interface inside collector.
+	if verbose {
+		l := log.New(os.Stderr, "docker-doctor ", log.LstdFlags)
+		ctx = collector.WithLogger(ctx, l)
+	}
 
 	report, err := collector.Collect(ctx, apiVersion, cfg)
 	if err != nil {
