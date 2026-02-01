@@ -14,21 +14,24 @@ import (
 	"github.com/example/docker-doctor/internal/types"
 )
 
-func collectContainers(ctx context.Context, dockerHost string, apiVersion string) (*types.Containers, error) {
+func collectContainers(ctx context.Context, dockerHost string, apiVersion string) (*types.Containers, map[string]bool, error) {
 	cli, err := newClient(dockerHost, apiVersion)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	containers, err := cli.ContainerList(dtypes.ContainerListOptions{All: true})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cont := &types.Containers{
 		Count: len(containers),
 		List:  make([]types.ContainerInfo, 0, len(containers)),
 	}
+
+	usedVolumes := make(map[string]bool)
+	var mu sync.Mutex
 
 	// Bounded concurrency for better latency on hosts with many containers.
 	type row struct {
@@ -55,6 +58,17 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 				}
 				restartCount = inspect.RestartCount
 				healthStatus, unhealthySince = parseHealthFromInspectRaw(raw)
+
+				// Collect used volumes (named volumes have Name set)
+				if inspect.Mounts != nil {
+					mu.Lock()
+					for _, mount := range inspect.Mounts {
+						if mount.Name != "" {
+							usedVolumes[mount.Name] = true
+						}
+					}
+					mu.Unlock()
+				}
 			}
 
 			name := ""
@@ -93,7 +107,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 		return cont.List[i].ID < cont.List[j].ID
 	})
 
-	return cont, nil
+	return cont, usedVolumes, nil
 }
 
 func getContainerLogSize(containerID string) (uint64, error) {

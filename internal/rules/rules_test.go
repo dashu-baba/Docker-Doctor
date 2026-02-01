@@ -50,6 +50,13 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 				},
 			},
 		},
+		Volumes: types.Volumes{
+			Count: 2,
+			List: []types.VolumeInfo{
+				{Name: "vol1", Size: 100, Used: false},
+				{Name: "vol2", Size: 200, Used: true},
+			},
+		},
 	}
 
 	df := &facts.DockerSystemDfSummary{
@@ -71,6 +78,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 		"OOM_KILLED",
 		"HEALTHCHECK_UNHEALTHY",
 		"LOG_BLOAT",
+		"VOLUME_BLOAT",
 	} {
 		if !seen[want] {
 			t.Fatalf("expected ruleId %s to be produced, got %+v", want, seen)
@@ -92,6 +100,10 @@ func TestEvaluate_StorageBloat_PrefersSystemDf(t *testing.T) {
 			TotalSize: 999999999, // should be ignored when df present
 			List:      []types.ImageInfo{{ID: "img1", Size: 100}, {ID: "img2", Size: 1}},
 		},
+		Volumes: types.Volumes{
+			Count: 1,
+			List:  []types.VolumeInfo{{Name: "vol1", Size: 50, Used: false}},
+		},
 	}
 	df := &facts.DockerSystemDfSummary{
 		ImagesTotalBytes:     101,
@@ -100,11 +112,17 @@ func TestEvaluate_StorageBloat_PrefersSystemDf(t *testing.T) {
 
 	Evaluate(report, cfg, df)
 
-	if len(report.Issues) != 1 {
-		t.Fatalf("expected 1 issue, got %d", len(report.Issues))
+	if len(report.Issues) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(report.Issues))
 	}
-	if report.Issues[0].RuleID != "DOCKER_STORAGE_BLOAT" {
-		t.Fatalf("expected DOCKER_STORAGE_BLOAT, got %s", report.Issues[0].RuleID)
+	found := false
+	for _, issue := range report.Issues {
+		if issue.RuleID == "DOCKER_STORAGE_BLOAT" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected DOCKER_STORAGE_BLOAT to be present")
 	}
 	if report.Issues[0].Facts["measurement"] != "system_df_layers_size" {
 		t.Fatalf("expected measurement system_df_layers_size, got %#v", report.Issues[0].Facts["measurement"])

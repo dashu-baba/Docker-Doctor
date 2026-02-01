@@ -37,7 +37,7 @@ func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types
 	}
 	report.Docker = *dockerInfo
 
-	containers, err := collectContainers(ctx, cfg.Scan.DockerHost, apiVersion)
+	containers, usedVolumes, err := collectContainers(ctx, cfg.Scan.DockerHost, apiVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect containers: %w", err)
 	}
@@ -49,7 +49,7 @@ func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types
 	}
 	report.Images = *images
 
-	volumes, err := collectVolumes(ctx, cfg.Scan.DockerHost, apiVersion)
+	volumes, err := collectVolumes(ctx, cfg.Scan.DockerHost, apiVersion, usedVolumes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect volumes: %w", err)
 	}
