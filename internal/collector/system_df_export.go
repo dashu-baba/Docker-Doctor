@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/docker-doctor/internal/facts"
+	"github.com/dashu-baba/docker-doctor/internal/facts"
 )
 
 type dockerSystemDFResponse struct {

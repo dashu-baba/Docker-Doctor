@@ -3,9 +3,9 @@ package collector
 import (
 	"context"
 
-	dtypes "github.com/docker/engine-api/types"
+	dtypes "github.com/docker/docker/api/types"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectImages(ctx context.Context, dockerHost string, apiVersion string) (*types.Images, error) {
@@ -14,7 +14,7 @@ func collectImages(ctx context.Context, dockerHost string, apiVersion string) (*
 		return nil, err
 	}
 
-	images, err := cli.ImageList(dtypes.ImageListOptions{All: true})
+	images, err := cli.ImageList(ctx, dtypes.ImageListOptions{All: true})
 	if err != nil {
 		return nil, err
 	}

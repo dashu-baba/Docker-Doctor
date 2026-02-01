@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	dtypes "github.com/docker/engine-api/types"
+	dtypes "github.com/docker/docker/api/types"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectContainers(ctx context.Context, dockerHost string, apiVersion string) (*types.Containers, map[string]bool, error) {
@@ -20,7 +20,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 		return nil, nil, err
 	}
 
-	containers, err := cli.ContainerList(dtypes.ContainerListOptions{All: true})
+	containers, err := cli.ContainerList(ctx, dtypes.ContainerListOptions{All: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -47,7 +47,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			inspect, raw, err := cli.ContainerInspectWithRaw(c.ID, false)
+			inspect, raw, err := cli.ContainerInspectWithRaw(ctx, c.ID, false)
 			oomKilled := false
 			healthStatus := "none"
 			var unhealthySince time.Time

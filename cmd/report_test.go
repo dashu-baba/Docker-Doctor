@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/example/docker-doctor/internal/schema/v1"
+	v1 "github.com/dashu-baba/docker-doctor/internal/schema/v1"
 )
 
 func TestGenerateMarkdownv1_BasicSections(t *testing.T) {

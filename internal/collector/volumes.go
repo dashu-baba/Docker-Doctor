@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/docker/engine-api/types/filters"
+	"github.com/docker/docker/api/types/filters"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectVolumes(ctx context.Context, dockerHost string, apiVersion string, usedVolumes map[string]bool) (*types.Volumes, error) {
@@ -17,7 +17,7 @@ func collectVolumes(ctx context.Context, dockerHost string, apiVersion string, u
 		return nil, err
 	}
 
-	volumes, err := cli.VolumeList(filters.Args{})
+	volumes, err := cli.VolumeList(ctx, filters.Args{})
 	if err != nil {
 		return nil, err
 	}

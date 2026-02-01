@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/facts"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/facts"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 // topOffenders returns the top N items by size, formatted as strings

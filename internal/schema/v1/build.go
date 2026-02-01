@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/docker-doctor/internal/collector"
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/collector"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func BuildFromV0(ctx context.Context, v0 *types.Report, cfg *config.Config, apiVersion string, startedAt time.Time, finishedAt time.Time, version, gitCommit, buildTime string) Report {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/example/docker-doctor/cmd"
+	"github.com/dashu-baba/docker-doctor/cmd"
 )
 
 var (

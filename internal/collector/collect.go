@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/rules"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/rules"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 // Collect gathers all the required data for the report.

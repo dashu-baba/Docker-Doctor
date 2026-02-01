@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func TestBuildFromV0_HasRequiredTopLevelFields(t *testing.T) {

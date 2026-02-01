@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/facts"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/facts"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {

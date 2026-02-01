@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func checkVolumeSize(report *types.Report, cfg *config.Config) {

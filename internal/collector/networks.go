@@ -3,9 +3,9 @@ package collector
 import (
 	"context"
 
-	dockertypes "github.com/docker/engine-api/types"
+	dtypes "github.com/docker/docker/api/types"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectNetworks(ctx context.Context, dockerHost string, apiVersion string) (*types.Networks, error) {
@@ -14,7 +14,7 @@ func collectNetworks(ctx context.Context, dockerHost string, apiVersion string) 
 		return nil, err
 	}
 
-	networks, err := cli.NetworkList(dockertypes.NetworkListOptions{})
+	networks, err := cli.NetworkList(ctx, dtypes.NetworkListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func collectNetworks(ctx context.Context, dockerHost string, apiVersion string) 
 	// Inspect each network to get CIDR
 	for _, n := range networks {
 		cidr := ""
-		if inspect, err := cli.NetworkInspect(n.ID); err == nil {
+		if inspect, err := cli.NetworkInspect(ctx, n.ID, dtypes.NetworkInspectOptions{}); err == nil {
 			if len(inspect.IPAM.Config) > 0 {
 				cidr = inspect.IPAM.Config[0].Subnet
 			}

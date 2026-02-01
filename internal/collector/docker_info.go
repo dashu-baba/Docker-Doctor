@@ -3,7 +3,7 @@ package collector
 import (
 	"context"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectDockerInfo(ctx context.Context, dockerHost string, apiVersion string) (*types.DockerInfo, error) {
@@ -12,12 +12,12 @@ func collectDockerInfo(ctx context.Context, dockerHost string, apiVersion string
 		return nil, err
 	}
 
-	version, err := cli.ServerVersion()
+	version, err := cli.ServerVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := cli.Info()
+	info, err := cli.Info(ctx)
 	if err != nil {
 		return nil, err
 	}

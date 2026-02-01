@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/example/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/config"
 )
 
 func TestCollect(t *testing.T) {

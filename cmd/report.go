@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/example/docker-doctor/internal/schema/v1"
-	"github.com/example/docker-doctor/internal/types"
+	v1 "github.com/dashu-baba/docker-doctor/internal/schema/v1"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 	"github.com/spf13/cobra"
 )
 

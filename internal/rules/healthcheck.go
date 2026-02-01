@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/example/docker-doctor/internal/config"
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/config"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func checkHealthcheck(report *types.Report, cfg *config.Config) {

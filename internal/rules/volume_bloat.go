@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func checkVolumeBloat(report *types.Report) {

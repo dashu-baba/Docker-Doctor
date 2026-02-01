@@ -10,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/example/docker-doctor/internal/types"
+	"github.com/dashu-baba/docker-doctor/internal/types"
 )
 
 func collectHostInfo() (*types.HostInfo, error) {
