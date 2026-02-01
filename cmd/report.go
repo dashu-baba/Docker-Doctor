@@ -326,9 +326,10 @@ func generateHTMLv1(report *v1.Report) (string, error) {
                       </ol>
                     {{end}}
                     {{if .Commands}}
-                      <div class="muted">Commands</div>
-                      <pre>{{range .Commands}}{{.}}
-{{end}}</pre>
+                      <div class="muted" style="margin-top:10px;">Commands</div>
+                      <ul class="muted" style="padding-left:20px;">
+                        {{range .Commands}}<li><code>{{.}}</code></li>{{end}}
+                      </ul>
                     {{end}}
                     {{if .Notes}}
                       <div class="muted">Notes</div>

@@ -189,6 +189,20 @@ func stringFromDaemonInfo(m map[string]interface{}, key string) string {
 	return ""
 }
 
+func categorizeSolutions(solutions []string) (steps, commands, notes []string) {
+	for _, sol := range solutions {
+		sol = strings.TrimSpace(sol)
+		if strings.Contains(sol, "docker image rm") || strings.Contains(sol, "docker builder prune") || strings.Contains(sol, "docker system df") {
+			commands = append(commands, sol)
+		} else if strings.Contains(sol, "Total") || strings.Contains(sol, "Top") || strings.Contains(sol, "Build cache") || strings.Contains(sol, "Consider") {
+			notes = append(notes, sol)
+		} else {
+			steps = append(steps, sol)
+		}
+	}
+	return
+}
+
 func mapIssueToFinding(is types.Issue) Finding {
 	severity := "info"
 	switch strings.ToLower(is.Severity) {
@@ -251,12 +265,14 @@ func mapIssueToFinding(is types.Issue) Finding {
 	}
 	sort.Slice(evidence, func(i, j int) bool { return evidence[i].Key < evidence[j].Key })
 
+	steps, commands, notes := categorizeSolutions(is.Solutions)
+
 	reco := Recommendation{
 		Risk:     "planned",
 		Title:    "Recommended actions",
-		Steps:    is.Solutions,
-		Commands: []string{},
-		Notes:    []string{},
+		Steps:    steps,
+		Commands: commands,
+		Notes:    notes,
 	}
 
 	fp := is.RuleID
