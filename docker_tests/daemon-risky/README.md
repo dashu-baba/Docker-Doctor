@@ -2,26 +2,24 @@
 
 This test scenario is for validating the `DAEMON_RISKY_SETTINGS` rule.
 
-## Prerequisites
+## What this does
 
-- Docker daemon with risky settings configured
+Starts a **Docker-in-Docker (DinD)** daemon with intentionally risky settings (via `daemon.json`) so you can run Docker-Doctor against it without changing your real host daemon.
 
-## Setup Risky Settings
+## How to run
 
-To test this rule, configure your Docker daemon with risky settings. For example:
+1) Start the scenario:
 
-1. Edit `/etc/docker/daemon.json`:
-```json
-{
-  "experimental": true,
-  "insecure-registries": ["registry.example.com"],
-  "log-driver": "none"
-}
+```bash
+cd docker_tests/daemon-risky
+docker compose up --build
 ```
 
-2. Restart Docker daemon:
+2) In another terminal, run a scan from repo root against the DinD daemon:
+
 ```bash
-sudo systemctl restart docker
+cd /Users/nowshadurrahaman/Projects/Nowshad/Docker-Doctor
+go run . scan --config docker_tests/daemon-risky/doctor.yml --output-dir ./out
 ```
 
 ## Expected Finding
@@ -30,6 +28,8 @@ sudo systemctl restart docker
 
 ## Notes
 
-- This test cannot be easily automated with docker-compose since daemon settings are global
-- The rule checks for experimental features, insecure registries, and logging configuration
-- Manual verification required for different daemon configurations
+- The scenario uses `docker_tests/daemon-risky/daemon.json` to enable:
+  - `experimental: true`
+  - `insecure-registries: [...]`
+  - `log-driver: none`
+- The DinD daemon is exposed on `tcp://localhost:23750` for the scan.

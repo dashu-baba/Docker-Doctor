@@ -1,0 +1,34 @@
+services:
+  dind:
+    image: docker:stable-dind
+    privileged: true
+    environment:
+      # Disable TLS so we can connect on plain TCP (2375).
+      DOCKER_TLS_CERTDIR: ""
+    command:
+      - dockerd
+      - --host=tcp://0.0.0.0:2375
+      - --host=unix:///var/run/docker.sock
+    ports:
+      # Avoid clashing with any existing local docker tcp listener.
+      - "23750:2375"
+    volumes:
+      - ./daemon.json:/etc/docker/daemon.json:ro
+      - dind-data:/var/lib/docker
+
+  seed:
+    image: docker:stable
+    depends_on:
+      - dind
+    environment:
+      DOCKER_HOST: tcp://dind:2375
+    command:
+      - sh
+      - -c
+      - |
+        until docker info >/dev/null 2>&1; do sleep 1; done
+        echo "DinD is ready"
+        sleep infinity
+
+volumes:
+  dind-data: {}

@@ -107,13 +107,13 @@ docker compose down --remove-orphans
 ### `daemon-risky/` (configuration validation)
 
 - **Goal**: trigger `DAEMON_RISKY_SETTINGS`
-- **How**: requires Docker daemon configured with risky settings (experimental, insecure registries, etc.)
+- **How**: spins up a Docker-in-Docker daemon with risky settings via `daemon.json`
 - **Expected finding**:
   - `DAEMON_RISKY_SETTINGS` (severity: medium/high)
 - **Notes**:
-  - Requires manual daemon configuration
-  - Cannot be automated with docker-compose
-  - See `daemon-risky/README.md` for setup instructions
+  - Run: `cd docker_tests/daemon-risky && docker compose up`
+  - Then scan using: `--config docker_tests/daemon-risky/doctor.yml`
+  - See `daemon-risky/README.md` for details
 
 ## Notes
 

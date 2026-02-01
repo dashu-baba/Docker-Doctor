@@ -1,9 +1,8 @@
 scan:
-  mode: full
+  mode: basic
   timeout: 30
-  dockerHost: unix:///Users/nowshadurrahaman/.rd/docker.sock
+  dockerHost: tcp://localhost:23750
   version: "1.41"
-
 
 rules:
   disk_usage:
