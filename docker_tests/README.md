@@ -21,13 +21,13 @@ docker compose up --build
 
 ```bash
 cd /Users/nowshadurrahaman/Projects/Nowshad/Docker-Doctor
-go run . scan --config doctor.yml --output scan.json
+go run . scan --config doctor.yml --output-dir ./out
 ```
 
 3) View findings:
 
 ```bash
-jq '.findings[] | {id,severity,fingerprint,summary}' scan.json
+jq '.findings[] | {id,severity,fingerprint,summary}' ./out/<scanId>/scan.json
 ```
 
 4) Cleanup:
@@ -69,11 +69,10 @@ docker compose down --remove-orphans
 - **Notes**:
   - The container will typically exit with code `137` after being killed.
 
-### `Healthcheck_Unhealthy/` (future rule validation)
+### `Healthcheck_Unhealthy/` (rule validation)
 
 - **Goal**: produce an unhealthy container health status
-- **Expected Doctor finding today**: **none** (we do not yet collect Docker health status, so `HEALTHCHECK_UNHEALTHY` cannot trigger).
-- **Expected once health is implemented**:
+- **Expected finding**:
   - `HEALTHCHECK_UNHEALTHY`
 
 - **`Restart_Loop/`**
@@ -88,23 +87,7 @@ docker compose down --remove-orphans
   - **Goal**: produce an unhealthy container health status
   - **Note**: the current implementation does not yet collect Docker health status, so this scenario is mainly for the next milestone.
 
-## Running a scenario
+## Notes
 
-From the scenario directory:
-
-```bash
-docker compose up --build
-```
-
-Then in the repo root:
-
-```bash
-go run . scan --config doctor.yml --output scan.json
-```
-
-Check findings:
-
-```bash
-jq '.findings[] | {id,severity,fingerprint,summary}' scan.json
-```
+- The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).
 

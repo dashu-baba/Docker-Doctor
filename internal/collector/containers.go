@@ -41,7 +41,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			inspect, err := cli.ContainerInspect(c.ID)
+			inspect, raw, err := cli.ContainerInspectWithRaw(c.ID, false)
 			oomKilled := false
 			healthStatus := "none"
 			var unhealthySince time.Time
@@ -51,6 +51,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 					oomKilled = inspect.State.OOMKilled
 				}
 				restartCount = inspect.RestartCount
+				healthStatus, unhealthySince = parseHealthFromInspectRaw(raw)
 			}
 
 			name := ""
