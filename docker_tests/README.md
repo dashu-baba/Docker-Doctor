@@ -39,28 +39,28 @@ docker compose down --remove-orphans
 
 ## Scenarios (what’s in this folder)
 
-### `CPU_heavy/` (workload generator)
+### `cpu-heavy/` (workload generator)
 
 - **Purpose**: Generates sustained CPU load (useful for future “host pressure” rules).
 - **Expected Doctor finding today**: **none** (we don’t scan CPU saturation yet).
 - **Notes**:
   - Adjust `THREADS` / `MATRIX` in `compose.yaml` to tune load.
 
-### `Disk_Heavy/` (workload generator)
+### `disk-heavy/` (workload generator)
 
 - **Purpose**: Writes data into a named volume (useful for future volume bloat checks).
 - **Expected Doctor finding today**: **none** (we don’t scan per-volume sizes yet).
 - **Notes**:
   - Controlled by `FILE_MB` in `compose.yaml` (writes into `/data` volume).
 
-### `Restart_Loop/` (rule validation)
+### `restart-loop/` (rule validation)
 
 - **Goal**: trigger `RESTART_LOOP`
 - **How**: container exits with code 1 under `restart: always`
 - **Expected finding**:
   - `RESTART_LOOP` (severity: `critical`)
 
-### `OOM_Killed/` (rule validation)
+### `oom-killed/` (rule validation)
 
 - **Goal**: trigger `OOM_KILLED`
 - **How**: memory hog container with a low memory limit (`mem_limit`)
@@ -69,7 +69,7 @@ docker compose down --remove-orphans
 - **Notes**:
   - The container will typically exit with code `137` after being killed.
 
-### `Healthcheck_Unhealthy/` (rule validation)
+### `healthcheck-unhealthy/` (rule validation)
 
 - **Goal**: produce an unhealthy container health status
 - **Expected finding**:
