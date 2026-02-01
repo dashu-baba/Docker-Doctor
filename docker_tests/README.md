@@ -75,6 +75,13 @@ docker compose down --remove-orphans
 - **Expected finding**:
   - `HEALTHCHECK_UNHEALTHY`
 
+### `log-bloat/` (rule validation)
+
+- **Goal**: trigger `LOG_BLOAT`
+- **How**: container generates large log output (>100MB)
+- **Expected finding**:
+  - `LOG_BLOAT` (severity: `medium` or `high` depending on size)
+
 ## Notes
 
 - The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).

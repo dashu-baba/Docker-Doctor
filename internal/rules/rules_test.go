@@ -17,9 +17,10 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 				ImageSizeThreshold:  10,
 				VolumeSizeThreshold: 0,
 			},
-			Restarts:    config.RestartsRule{Threshold: 3},
-			OOM:         config.OOMRule{Enabled: true},
-			Healthcheck: config.HealthcheckRule{Enabled: true},
+			Restarts:     config.RestartsRule{Threshold: 3},
+			OOM:          config.OOMRule{Enabled: true},
+			Healthcheck:  config.HealthcheckRule{Enabled: true},
+			LogBloat:     config.LogBloatRule{Enabled: true, SizeThreshold: 100},
 		},
 	}
 
@@ -41,6 +42,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 					OOMKilled:      true,
 					HealthStatus:   "unhealthy",
 					UnhealthySince: time.Now().Add(-2 * time.Hour),
+					LogSize:        200, // above threshold 100
 				},
 			},
 		},
@@ -64,6 +66,7 @@ func TestEvaluate_ProducesExpectedRuleIDs(t *testing.T) {
 		"RESTART_LOOP",
 		"OOM_KILLED",
 		"HEALTHCHECK_UNHEALTHY",
+		"LOG_BLOAT",
 	} {
 		if !seen[want] {
 			t.Fatalf("expected ruleId %s to be produced, got %+v", want, seen)

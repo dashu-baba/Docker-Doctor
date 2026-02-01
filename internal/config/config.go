@@ -29,6 +29,7 @@ type Rules struct {
 	Restarts     RestartsRule     `yaml:"restarts"`
 	OOM          OOMRule          `yaml:"oom"`
 	Healthcheck  HealthcheckRule  `yaml:"healthcheck"`
+	LogBloat     LogBloatRule     `yaml:"log_bloat"`
 }
 
 // DiskUsageRule defines rules for disk usage checks.
@@ -55,6 +56,12 @@ type OOMRule struct {
 // HealthcheckRule defines rules for container healthcheck checks.
 type HealthcheckRule struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// LogBloatRule defines rules for container log bloat checks.
+type LogBloatRule struct {
+	Enabled       bool   `yaml:"enabled"`
+	SizeThreshold uint64 `yaml:"size_threshold"` // in bytes
 }
 
 // Load reads and parses the config file.
@@ -124,7 +131,10 @@ func (r *Rules) Validate() error {
 	if err := r.OOM.Validate(); err != nil {
 		return err
 	}
-	return r.Healthcheck.Validate()
+	if err := r.Healthcheck.Validate(); err != nil {
+		return err
+	}
+	return r.LogBloat.Validate()
 }
 
 // Validate checks the DiskUsageRule for correctness.
@@ -163,5 +173,13 @@ func (o *OOMRule) Validate() error {
 // Validate checks the HealthcheckRule for correctness.
 func (h *HealthcheckRule) Validate() error {
 	// No validation needed for boolean
+	return nil
+}
+
+// Validate checks the LogBloatRule for correctness.
+func (l *LogBloatRule) Validate() error {
+	if l.SizeThreshold < 0 {
+		return fmt.Errorf("log_bloat size_threshold must be non-negative, got %d", l.SizeThreshold)
+	}
 	return nil
 }

@@ -17,3 +17,6 @@ rules:
     enabled: true
   healthcheck:
     enabled: true
+  log_bloat:
+    enabled: true
+    size_threshold: 104857600  # 100MB

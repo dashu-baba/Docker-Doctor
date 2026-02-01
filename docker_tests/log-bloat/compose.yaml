@@ -1,0 +1,9 @@
+services:
+  log-bloat-test:
+    build: .
+    container_name: log-bloat-test
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

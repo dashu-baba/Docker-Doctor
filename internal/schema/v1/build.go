@@ -208,6 +208,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		category = "storage"
 	case "RESTART_LOOP", "OOM_KILLED", "HEALTHCHECK_UNHEALTHY":
 		category = "stability"
+	case "LOG_BLOAT":
+		category = "storage"
 	}
 
 	title := is.RuleID
@@ -222,6 +224,8 @@ func mapIssueToFinding(is types.Issue) Finding {
 		title = "Container was killed by OOM"
 	case "HEALTHCHECK_UNHEALTHY":
 		title = "Container healthcheck is unhealthy"
+	case "LOG_BLOAT":
+		title = "Container logs are bloated"
 	}
 
 	scope := Scope{}

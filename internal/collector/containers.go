@@ -2,6 +2,9 @@ package collector
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -59,6 +62,11 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 				name = c.Names[0]
 			}
 
+			logSize := uint64(0)
+			if size, err := getContainerLogSize(c.ID); err == nil {
+				logSize = size
+			}
+
 			rows[i] = row{info: types.ContainerInfo{
 				ID:             c.ID[:12],
 				Name:           name,
@@ -67,6 +75,7 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 				OOMKilled:      oomKilled,
 				HealthStatus:   healthStatus,
 				UnhealthySince: unhealthySince,
+				LogSize:        logSize,
 			}}
 		}(i, c)
 	}
@@ -85,5 +94,15 @@ func collectContainers(ctx context.Context, dockerHost string, apiVersion string
 	})
 
 	return cont, nil
+}
+
+func getContainerLogSize(containerID string) (uint64, error) {
+	// Try to read the log file size from /var/lib/docker/containers/<id>/<id>-json.log
+	logPath := filepath.Join("/var/lib/docker/containers", containerID, containerID+"-json.log")
+	if stat, err := os.Stat(logPath); err == nil {
+		return uint64(stat.Size()), nil
+	}
+	// If not accessible, return 0 (host FS not mounted or different storage driver)
+	return 0, fmt.Errorf("log file not accessible")
 }
 

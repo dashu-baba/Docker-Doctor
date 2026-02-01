@@ -37,6 +37,7 @@ type ContainerInfo struct {
 	OOMKilled        bool      `json:"oom_killed"`
 	HealthStatus     string    `json:"health_status"`
 	UnhealthySince   time.Time `json:"unhealthy_since"`
+	LogSize          uint64    `json:"log_size"` // estimated log size in bytes
 }
 
 // Containers holds container count and detailed list.
