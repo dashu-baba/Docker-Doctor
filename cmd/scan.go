@@ -10,6 +10,7 @@ import (
 
 	"github.com/example/docker-doctor/internal/collector"
 	"github.com/example/docker-doctor/internal/config"
+	v1 "github.com/example/docker-doctor/internal/schema/v1"
 	"github.com/example/docker-doctor/internal/types"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,8 @@ containers, images, volumes, and disk usage. Outputs the report in JSON format.`
 	RunE: func(cmd *cobra.Command, args []string) error {
 		output, _ := cmd.Flags().GetString("output")
 		apiVersion, _ := cmd.Flags().GetString("api-version")
-		return runScan(output, apiVersion)
+		schema, _ := cmd.Flags().GetString("schema")
+		return runScan(output, apiVersion, schema)
 	},
 }
 
@@ -40,9 +42,12 @@ func init() {
 	// is called directly, e.g.:
 	scanCmd.Flags().StringP("output", "o", "", "Output file for the JSON report (default stdout)")
 	scanCmd.Flags().String("api-version", "", "Docker API version to use (overrides config)")
+	scanCmd.Flags().String("schema", "v0", "Output schema: v0 or v1")
 }
 
-func runScan(output string, apiVersion string) error {
+func runScan(output string, apiVersion string, schema string) error {
+	startedAt := time.Now()
+
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		return ExitError{Code: 3, Err: err}
@@ -64,7 +69,18 @@ func runScan(output string, apiVersion string) error {
 		return ExitError{Code: 3, Err: fmt.Errorf("failed to collect data: %w", err)}
 	}
 
-	data, err := json.MarshalIndent(report, "", "  ")
+	finishedAt := time.Now()
+
+	var data []byte
+	switch strings.ToLower(strings.TrimSpace(schema)) {
+	case "", "v0":
+		data, err = json.MarshalIndent(report, "", "  ")
+	case "v1":
+		v1Report := v1.BuildFromV0(ctx, report, cfg, apiVersion, startedAt, finishedAt)
+		data, err = json.MarshalIndent(v1Report, "", "  ")
+	default:
+		return ExitError{Code: 3, Err: fmt.Errorf("unsupported schema: %s (use v0 or v1)", schema)}
+	}
 	if err != nil {
 		return ExitError{Code: 3, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
 	}

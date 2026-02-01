@@ -2,12 +2,7 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
 	"runtime"
 	"sort"
@@ -67,100 +62,12 @@ func Collect(ctx context.Context, apiVersion string, cfg *config.Config) (*types
 
 	// Best-effort: Docker system df (deduplicated disk usage)
 	// This reduces confusion vs summing image sizes (which can overcount shared layers).
-	df, _ := collectDockerSystemDF(ctx, apiVersion)
+	df, _ := CollectDockerSystemDfSummary(ctx, apiVersion)
 
 	// Run diagnostics
 	diagnose(report, cfg, df)
 
 	return report, nil
-}
-
-type dockerSystemDF struct {
-	LayersSize int64 `json:"LayersSize"`
-	Images     []struct {
-		Size int64 `json:"Size"`
-	} `json:"Images"`
-	Containers []struct {
-		SizeRw int64 `json:"SizeRw"`
-	} `json:"Containers"`
-	Volumes []struct {
-		UsageData struct {
-			Size int64 `json:"Size"`
-		} `json:"UsageData"`
-	} `json:"Volumes"`
-	BuildCache []struct {
-		Size int64 `json:"Size"`
-	} `json:"BuildCache"`
-}
-
-func collectDockerSystemDF(ctx context.Context, apiVersion string) (*dockerSystemDF, error) {
-	host := os.Getenv("DOCKER_HOST")
-	if host == "" {
-		host = "unix:///var/run/docker.sock"
-	}
-
-	u, err := url.Parse(host)
-	if err != nil {
-		return nil, err
-	}
-
-	// Docker uses "tcp://" scheme for plain HTTP.
-	// url.Parse("tcp://...") keeps Scheme=tcp; we map it to http.
-	base := &url.URL{}
-	var transport *http.Transport
-
-	switch u.Scheme {
-	case "unix":
-		socketPath := u.Path
-		transport = &http.Transport{
-			DisableCompression: true,
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.DialTimeout("unix", socketPath, 32*time.Second)
-			},
-		}
-		base.Scheme = "http"
-		base.Host = "docker" // dummy, ignored by unix transport
-	case "tcp", "http", "https":
-		base.Scheme = "http"
-		if u.Scheme == "https" {
-			base.Scheme = "https"
-		}
-		base.Host = u.Host
-		base.Path = strings.TrimSuffix(u.Path, "/")
-		transport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout: 32 * time.Second,
-			}).DialContext,
-		}
-	default:
-		return nil, fmt.Errorf("unsupported DOCKER_HOST scheme: %s", u.Scheme)
-	}
-
-	client := &http.Client{Transport: transport}
-	path := fmt.Sprintf("/v%s/system/df", strings.TrimPrefix(apiVersion, "v"))
-	reqURL := base.ResolveReference(&url.URL{Path: path})
-
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("system df request failed: %s (%s)", resp.Status, strings.TrimSpace(string(b)))
-	}
-
-	var df dockerSystemDF
-	if err := json.NewDecoder(resp.Body).Decode(&df); err != nil {
-		return nil, err
-	}
-	return &df, nil
 }
 
 func collectHostInfo() (*types.HostInfo, error) {
@@ -336,7 +243,7 @@ func collectVolumes(ctx context.Context, apiVersion string) (*types.Volumes, err
 	return vol, nil
 }
 
-func diagnose(report *types.Report, cfg *config.Config, df *dockerSystemDF) {
+func diagnose(report *types.Report, cfg *config.Config, df *DockerSystemDfSummary) {
 	// Check disk usage
 	for path, disk := range report.Host.DiskUsage {
 		if disk.UsedPercent > float64(cfg.Rules.DiskUsage.Threshold) {
@@ -392,19 +299,11 @@ func diagnose(report *types.Report, cfg *config.Config, df *dockerSystemDF) {
 	measurement := "image_list_sum"
 	buildCacheSize := uint64(0)
 	if df != nil {
-		if df.LayersSize > 0 {
-			imageSizeObserved = uint64(df.LayersSize)
+		if df.ImagesTotalBytes > 0 {
+			imageSizeObserved = df.ImagesTotalBytes
 			measurement = "system_df_layers_size"
 		}
-		var bc int64
-		for _, e := range df.BuildCache {
-			if e.Size > 0 {
-				bc += e.Size
-			}
-		}
-		if bc > 0 {
-			buildCacheSize = uint64(bc)
-		}
+		buildCacheSize = df.BuildCacheTotalBytes
 	}
 
 	if imageSizeObserved > cfg.Rules.StorageBloat.ImageSizeThreshold {
