@@ -75,18 +75,6 @@ docker compose down --remove-orphans
 - **Expected finding**:
   - `HEALTHCHECK_UNHEALTHY`
 
-- **`Restart_Loop/`**
-  - **Goal**: trigger `RESTART_LOOP`
-  - **How**: container exits with code 1 under `restart: always`
-
-- **`OOM_Killed/`**
-  - **Goal**: trigger `OOM_KILLED`
-  - **How**: memory hog container with a low memory limit
-
-- **`Healthcheck_Unhealthy/`** (future)
-  - **Goal**: produce an unhealthy container health status
-  - **Note**: the current implementation does not yet collect Docker health status, so this scenario is mainly for the next milestone.
-
 ## Notes
 
 - The `scan` command writes artifacts to `./out/<scanId>/` by default (configurable via `--output-dir`).
